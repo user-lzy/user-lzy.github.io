@@ -1,0 +1,252 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Hexo + Butterfly 个人技术博客搭建全记录 | Snow的技术博客</title><meta name="author" content="Snow"><meta name="copyright" content="Snow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="从零开始搭建Hexo博客并配置Butterfly主题，包含环境配置、主题安装、常见踩坑及部署上线的完整记录。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hexo + Butterfly 个人技术博客搭建全记录">
+<meta property="og:url" content="http://example.com/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/index.html">
+<meta property="og:site_name" content="Snow的技术博客">
+<meta property="og:description" content="从零开始搭建Hexo博客并配置Butterfly主题，包含环境配置、主题安装、常见踩坑及部署上线的完整记录。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/images/14.jpg">
+<meta property="article:published_time" content="2026-07-27T10:00:00.000Z">
+<meta property="article:modified_time" content="2026-07-27T13:32:30.239Z">
+<meta property="article:author" content="Snow">
+<meta property="article:tag" content="Butterfly">
+<meta property="article:tag" content="GitHub Pages">
+<meta property="article:tag" content="Hexo">
+<meta property="article:tag" content="博客搭建">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/14.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Hexo + Butterfly 个人技术博客搭建全记录",
+  "url": "http://example.com/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/",
+  "image": "http://example.com/images/14.jpg",
+  "datePublished": "2026-07-27T10:00:00.000Z",
+  "dateModified": "2026-07-27T13:32:30.239Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Snow",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Hexo + Butterfly 个人技术博客搭建全记录',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">2</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Snow的技术博客</span></a><a class="nav-page-title" href="/"><span class="site-name">Hexo + Butterfly 个人技术博客搭建全记录</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Hexo + Butterfly 个人技术博客搭建全记录</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-07-27T10:00:00.000Z" title="发表于 2026-07-27 18:00:00">2026-07-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-07-27T13:32:30.239Z" title="更新于 2026-07-27 21:32:30">2026-07-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%8A%80%E6%9C%AF%E6%95%99%E7%A8%8B/">技术教程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>前言<br>作为一个正在学习网络安全的技术人，我一直想拥有一个属于自己的技术博客，用来记录学习笔记和踩坑经验。经过一段时间的折腾，终于把博客搭起来了。这篇文章完整记录了从环境准备到部署上线的全过程，希望能帮助到同样想搭建博客的你。<br>一、环境准备与Hexo初始化<br>1.1 安装Node.js<br>Hexo基于Node.js运行，建议安装18.x或更高版本。安装完成后在终端验证版本：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">node -v</span><br><span class="line">npm -v</span><br></pre></td></tr></table></figure>
+<p>1.2 安装Git<br>从Git官网下载安装，用于版本控制、主题拉取以及博客后续部署。<br>1.3 安装Hexo CLI<br>全局安装Hexo脚手架工具：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install -g hexo-cli</span><br></pre></td></tr></table></figure>
+<p>1.4 初始化博客项目<br>在普通文件夹下创建博客目录，规避权限报错问题：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> projects &amp;&amp; <span class="built_in">cd</span> projects</span><br><span class="line">hexo init my-blog</span><br><span class="line"><span class="built_in">cd</span> my-blog</span><br><span class="line">npm install</span><br></pre></td></tr></table></figure>
+<p>1.5 本地预览博客<br>启动本地服务，预览初始博客页面：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo server</span><br></pre></td></tr></table></figure>
+<p>访问 <code>http://localhost:4000</code>，看到Hexo默认博客页面即为初始化成功。<br>⚠️ 踩坑记录：hexo init 连接失败<br>执行初始化时遇到报错：<code>Failed to connect to github.com port 443 via 127.0.0.1</code><br>报错原因：Git全局代理配置与本地代理软件端口不匹配，导致无法正常拉取GitHub资源。<br>解决方案：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 方案A：取消全局代理（优先推荐）</span></span><br><span class="line">git config --global --<span class="built_in">unset</span> http.proxy</span><br><span class="line">git config --global --<span class="built_in">unset</span> https.proxy</span><br><span class="line"></span><br><span class="line"><span class="comment"># 方案B：需保留代理时，配置正确端口</span></span><br><span class="line">git config --global http.proxy http://127.0.0.1:7890</span><br><span class="line">git config --global https.proxy http://127.0.0.1:7890</span><br></pre></td></tr></table></figure>
+<p>经验总结：浏览器可正常访问GitHub，不代表Git网络配置正常，二者独立生效，需单独配置。<br>二、安装Butterfly主题<br>Butterfly是Hexo热门现代化主题，内置暗黑模式、TOC目录、代码高亮、图片灯箱等丰富功能，无需大量自定义插件，开箱即用。<br>2.1 克隆主题源码<br>在博客根目录执行命令，拉取稳定版主题：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># GitHub官方源（稳定版）</span></span><br><span class="line">git <span class="built_in">clone</span> -b master https://github.com/jerryc127/hexo-theme-butterfly.git themes/butterfly</span><br></pre></td></tr></table></figure>
+<p>国内GitHub访问卡顿&#x2F;超时，可使用Gitee镜像源：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Gitee镜像源</span></span><br><span class="line">git <span class="built_in">clone</span> -b master https://gitee.com/immyw/hexo-theme-butterfly.git themes/butterfly</span><br></pre></td></tr></table></figure>
+<p>2.2 安装主题依赖<br>Butterfly依赖pug、stylus渲染器，必须安装否则页面渲染报错：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-renderer-pug hexo-renderer-stylus --save</span><br></pre></td></tr></table></figure>
+<p>2.3 启用主题<br>打开博客根目录 <code>_config.yml</code>，修改主题配置：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">theme:</span> <span class="string">butterfly</span></span><br></pre></td></tr></table></figure>
+<p>2.4 验证主题生效<br>清除缓存并重启本地服务：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo clean &amp;&amp; hexo server</span><br></pre></td></tr></table></figure>
+<p>页面从默认简约样式变为现代化卡片布局，即主题安装启用成功。<br>三、主题基础个性化配置<br>3.1 分离主题配置文件（关键）<br>禁止直接修改<code>themes/butterfly/_config.yml</code>，主题升级会清空自定义配置。<br>在根目录生成独立主题配置文件，永久保留自定义配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cp</span> themes/butterfly/_config.yml _config.butterfly.yml</span><br></pre></td></tr></table></figure>
+<p>后续所有主题美化、功能开关均修改 <code>_config.butterfly.yml</code> 文件。<br>3.2 站点基础信息配置<br>修改根目录 <code>_config.yml</code>，配置网站核心信息：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">title:</span> <span class="string">SnowSword</span></span><br><span class="line"><span class="attr">subtitle:</span> <span class="string">&#x27;记录网络安全学习之路&#x27;</span></span><br><span class="line"><span class="attr">description:</span> <span class="string">&#x27;网络安全学习笔记与技术分享&#x27;</span></span><br><span class="line"><span class="attr">author:</span> <span class="string">Snow</span></span><br><span class="line"><span class="attr">language:</span> <span class="string">zh-CN</span></span><br><span class="line"><span class="attr">timezone:</span> <span class="string">&#x27;Asia/Shanghai&#x27;</span></span><br><span class="line"><span class="attr">url:</span> <span class="string">https://user-lzy.github.io</span></span><br></pre></td></tr></table></figure>
+<p>3.3 导航栏菜单配置<br>修改 <code>_config.butterfly.yml</code>，自定义顶部导航及图标：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">menu:</span></span><br><span class="line">  <span class="string">首页:</span> <span class="string">/</span> <span class="string">||</span> <span class="string">fa-solid</span> <span class="string">fa-house</span></span><br><span class="line">  <span class="string">归档:</span> <span class="string">/archives/</span> <span class="string">||</span> <span class="string">fa-solid</span> <span class="string">fa-archive</span></span><br><span class="line">  <span class="string">分类:</span> <span class="string">/categories/</span> <span class="string">||</span> <span class="string">fa-solid</span> <span class="string">fa-folder</span></span><br><span class="line">  <span class="string">标签:</span> <span class="string">/tags/</span> <span class="string">||</span> <span class="string">fa-solid</span> <span class="string">fa-tags</span></span><br><span class="line">  <span class="string">关于:</span> <span class="string">/about/</span> <span class="string">||</span> <span class="string">fa-solid</span> <span class="string">fa-user</span></span><br></pre></td></tr></table></figure>
+<p>3.4 首页文章摘要规则<br>配置首页文章展示逻辑，优化阅读体验：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">index_post_content:</span></span><br><span class="line">  <span class="attr">method:</span> <span class="number">2</span>          <span class="comment"># 优先读取文章description，无则自动截取正文</span></span><br><span class="line">  <span class="attr">length:</span> <span class="number">500</span>        <span class="comment"># 摘要最大字数</span></span><br></pre></td></tr></table></figure>
+<p>3.5 创建必备独立页面<br>终端执行命令，批量生成分类、标签、关于页面：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo new page categories</span><br><span class="line">hexo new page tags</span><br><span class="line">hexo new page about</span><br></pre></td></tr></table></figure>
+<p>依次修改对应页面<code>index.md</code> 配置：<br>source&#x2F;categories&#x2F;index.md</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: 分类</span><br><span class="line">type: &quot;categories&quot;</span><br><span class="line"><span class="section">comments: false</span></span><br><span class="line"><span class="section">---</span></span><br></pre></td></tr></table></figure>
+<p>source&#x2F;tags&#x2F;index.md</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: 标签</span><br><span class="line">type: &quot;tags&quot;</span><br><span class="line"><span class="section">comments: false</span></span><br><span class="line"><span class="section">---</span></span><br></pre></td></tr></table></figure>
+<p>source&#x2F;about&#x2F;index.md</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">---</span><br><span class="line">title: 关于我</span><br><span class="line">type: &quot;about&quot;</span><br><span class="line"><span class="section">comments: false</span></span><br><span class="line"><span class="section">---</span></span><br><span class="line"></span><br><span class="line">欢迎来到我的技术博客！这里主要记录我在网络安全学习中的笔记与踩坑经验。</span><br></pre></td></tr></table></figure>
+<p>3.6 头像配置及避坑指南<br>将头像图片放入 <code>source/images/</code> 目录，修改 <code>_config.butterfly.yml</code>：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 侧边栏头像配置</span></span><br><span class="line"><span class="attr">avatar:</span></span><br><span class="line">  <span class="attr">img:</span> <span class="string">/images/14.jpg</span></span><br><span class="line">  <span class="attr">effect:</span> <span class="literal">false</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 关于页面信息配置</span></span><br><span class="line"><span class="attr">about:</span></span><br><span class="line">  <span class="attr">enable:</span> <span class="literal">true</span></span><br><span class="line">  <span class="attr">avatar:</span> <span class="string">/images/14.jpg</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">&quot;Snow&quot;</span></span><br><span class="line">  <span class="attr">description:</span> <span class="string">&quot;程序员一枚，正在学习网络安全&quot;</span></span><br><span class="line">  <span class="attr">top_img:</span> <span class="string">/images/14.jpg</span></span><br></pre></td></tr></table></figure>
+<p>避坑提示：头像显示默认占位图，大概率是图片路径错误或未执行 <code>hexo clean</code> 清除缓存。<br>四、GitHub Pages 部署上线<br>4.1 创建专属GitHub仓库<br>登录GitHub，新建公开仓库，仓库名必须严格遵循格式：<code>用户名.github.io</code>（与自己GitHub用户名完全一致），否则无法正常访问。<br>4.2 安装部署插件<br>安装Hexo Git部署工具，实现一键部署：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-deployer-git --save</span><br></pre></td></tr></table></figure>
+<p>4.3 配置部署参数<br>修改根目录 <code>_config.yml</code> 部署配置：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">deploy:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">&#x27;git&#x27;</span></span><br><span class="line">  <span class="attr">repo:</span> <span class="string">https://github.com/user-lzy/user-lzy.github.io.git</span></span><br><span class="line">  <span class="attr">branch:</span> <span class="string">main</span></span><br></pre></td></tr></table></figure>
+<p>4.4 一键部署上线<br>依次执行清理、生成、部署命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean    <span class="comment"># 清除旧缓存文件</span></span><br><span class="line">hexo generate <span class="comment"># 生成静态网站文件</span></span><br><span class="line">hexo deploy   <span class="comment"># 部署到GitHub Pages</span></span><br></pre></td></tr></table></figure>
+<p>部署成功后，访问 <code>https://user-lzy.github.io</code> 即可成功访问个人博客。<br>五、博客后续优化方向<br>基础搭建完成后，可按需进行功能优化，提升博客体验：<br>优化方向	功能说明<br>站内搜索	安装 <code>hexo-generator-search</code> 实现本地全文搜索<br>评论系统	接入Giscus、Twikoo等轻量化评论插件<br>站点统计	开启内置不蒜子统计，展示访客、浏览量数据<br>暗黑模式	Butterfly原生支持，可直接在配置文件开启切换功能<br>代码高亮美化	切换主题内置代码高亮配色，适配编程阅读场景<br>写在最后<br>搭建个人技术博客门槛并不高，核心在于耐心配置、解决报错。Hexo+Butterfly+GitHub Pages的组合，零成本、高颜值、易维护，非常适合技术新人记录学习历程。<br>后续我会持续更新网络安全学习笔记，完善博客功能。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">Snow</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/">http://example.com/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Snow的技术博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Hexo/">Hexo</a><a class="post-meta__tags" href="/tags/Butterfly/">Butterfly</a><a class="post-meta__tags" href="/tags/%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA/">博客搭建</a><a class="post-meta__tags" href="/tags/GitHub-Pages/">GitHub Pages</a></div><div class="post-share"><div class="social-share" data-image="/images/14.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/07/27/hello-world/" title="Hello World"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Hello World</div></div><div class="info-2"><div class="info-item-1">Welcome to Hexo! This is your very first post. Check documentation for more info. If you get any problems when using Hexo, you can find the answer in troubleshooting or you can ask me on GitHub. Quick StartCreate a new post1$ hexo new &quot;My New Post&quot;  More info: Writing Run server1$ hexo server  More info: Server Generate static files1$ hexo generate  More info: Generating Deploy to remote sites1$ hexo deploy  More info: Deployment </div></div></div></a></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Snow</div><div class="author-info-description">网络安全个人技术博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">2</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">4</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">1</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/" title="Hexo + Butterfly 个人技术博客搭建全记录">Hexo + Butterfly 个人技术博客搭建全记录</a><time datetime="2026-07-27T10:00:00.000Z" title="发表于 2026-07-27 18:00:00">2026-07-27</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/07/27/hello-world/" title="Hello World">Hello World</a><time datetime="2026-07-27T08:26:19.822Z" title="发表于 2026-07-27 16:26:19">2026-07-27</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Snow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.6.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.6.1"></script><script src="/js/main.js?v=5.6.1"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
