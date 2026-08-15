@@ -1,0 +1,316 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历 | Snow的技术博客</title><meta name="author" content="Snow"><meta name="copyright" content="Snow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="学习如何在 Windows 内核中定位并遍历 PspCidTable（进程&#x2F;线程全局句柄表），作为 SnowSword 第二种进程枚举视角。通过 PsLookupProcessByProcessId 的 call 跳板逆向出 PspCidTable 地址，再按 TableCode 级数逐级遍历三级表，用 ObGetObjectType 过滤进程对象，handle 值即 PID。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历">
+<meta property="og:url" content="http://example.com/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/index.html">
+<meta property="og:site_name" content="Snow的技术博客">
+<meta property="og:description" content="学习如何在 Windows 内核中定位并遍历 PspCidTable（进程&#x2F;线程全局句柄表），作为 SnowSword 第二种进程枚举视角。通过 PsLookupProcessByProcessId 的 call 跳板逆向出 PspCidTable 地址，再按 TableCode 级数逐级遍历三级表，用 ObGetObjectType 过滤进程对象，handle 值即 PID。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/images/14.jpg">
+<meta property="article:published_time" content="2026-08-15T03:10:00.000Z">
+<meta property="article:modified_time" content="2026-08-15T10:59:04.212Z">
+<meta property="article:author" content="Snow">
+<meta property="article:tag" content="Anti-Rootkit">
+<meta property="article:tag" content="PspCidTable">
+<meta property="article:tag" content="Windows Kernel">
+<meta property="article:tag" content="内核逆向">
+<meta property="article:tag" content="进程枚举">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/14.jpg"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历",
+  "url": "http://example.com/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/",
+  "image": "http://example.com/images/14.jpg",
+  "datePublished": "2026-08-15T03:10:00.000Z",
+  "dateModified": "2026-08-15T10:59:04.212Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Snow",
+      "url": "http://example.com"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="http://example.com/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">22</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Snow的技术博客</span></a><a class="nav-page-title" href="/"><span class="site-name">PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-08-15T03:10:00.000Z" title="发表于 2026-08-15 11:10:00">2026-08-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-08-15T10:59:04.212Z" title="更新于 2026-08-15 18:59:04">2026-08-15</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8%E5%8D%8F%E4%BC%9A%E6%9A%91%E6%9C%9F%E5%9F%B9%E8%AE%AD/">网络安全协会暑期培训</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="1-缘起：为什么还需要第二种进程枚举视角"><a href="#1-缘起：为什么还需要第二种进程枚举视角" class="headerlink" title="1. 缘起：为什么还需要第二种进程枚举视角"></a>1. 缘起：为什么还需要第二种进程枚举视角</h2><p>在之前为 SnowSword 实现隐藏进程检测时，我用的方案是<strong>暴力扫描 PID</strong>：以 4 为步长枚举 <code>0 ~ 0x20000</code>，逐个调用 <code>PsLookupProcessByProcessId</code> 反查 EPROCESS。这个方案能用，但有几个明显的局限：</p>
+<ol>
+<li><strong>扫描范围是”假设”不是”机制”</strong>——<code>0x20000</code> 上限写死，高 PID 进程可能漏检；</li>
+<li><strong>大量无效查询</strong>——有效 PID 中仍有大量未分配槽位，每次都要完整走一次查询；</li>
+<li><strong>依赖 API 语义</strong>——<code>PsLookupProcessByProcessId</code> 本身是导出函数，如果攻击者 Hook 了内核查询路径，返回结果同样不可信。</li>
+</ol>
+<p>由此想到一个问题：能不能<strong>不经过任何查询 API，直接读取 Windows 内核自己维护的 PID → 进程对象映射</strong>？这个数据结构就是 <code>PspCidTable</code>。</p>
+<blockquote>
+<p>核心思路：公开 API 是访问内核数据结构的一个入口，直接遍历 PspCidTable 可以降低对单一查询 API 的依赖；但它不能保证绕过对内核数据结构本身的篡改，也不能消除私有结构随系统版本变化带来的兼容性风险。</p>
+</blockquote>
+<h2 id="2-PspCidTable-是什么"><a href="#2-PspCidTable-是什么" class="headerlink" title="2. PspCidTable 是什么"></a>2. PspCidTable 是什么</h2><p><code>PspCidTable</code> 是 <code>ntoskrnl.exe</code> 的私有全局变量，也是进程和线程共用的 <strong>CID（Client ID）表</strong>。PID 与 TID 都在其中。它不是普通用户态进程句柄表，下面的字段和编码说明也必须以具体 Windows 版本的实测结果为准。</p>
+<p>它的类型是 <code>HANDLE_TABLE</code>（未导出结构），遍历的关键字段是 <code>TableCode</code>：</p>
+<ul>
+<li><strong>低 2 位</strong>：表级数——<code>0</code> 单级、<code>1</code> 二级、<code>2</code> 三级；</li>
+<li><strong>高位</strong>：表基址（读取时用 <code>TableCode &amp; ~3</code> 抹零低 2 位）。</li>
+</ul>
+<p>单级&#x2F;二级&#x2F;三级结构的关系：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">单级： TableCode → Entry[]（直接索引）</span><br><span class="line">二级： TableCode → 二级表指针[512] → Entry[]</span><br><span class="line">三级： TableCode → 三级表指针[512] → 二级表指针[512] → Entry[]</span><br></pre></td></tr></table></figure>
+
+<p>其中 Entry 每项 16 字节（x64）。x64 Win10 上 PspCidTable 通常为三级结构。</p>
+<h2 id="3-如何定位-PspCidTable"><a href="#3-如何定位-PspCidTable" class="headerlink" title="3. 如何定位 PspCidTable"></a>3. 如何定位 PspCidTable</h2><p>PspCidTable 是未导出变量，不能直接引用。最直接的办法是从公开导出函数反向追踪。我这里用的是<strong>两步跳板定位法</strong>：</p>
+<ol>
+<li>在 <code>PsLookupProcessByProcessId</code> 开头 <code>0x100</code> 字节内搜特征码 <code>0xE8</code>（<code>call</code> 指令），解析相对偏移，得到它内部调用的 <code>PspReferenceCidTableEntry</code>；</li>
+<li>在 <code>PspReferenceCidTableEntry</code> 内搜特征码 <code>48 8B 05</code>（<code>mov rax, [rip+disp32]</code>），再解析相对偏移，就得到 <code>PspCidTable</code> 变量的运行时地址。</li>
+</ol>
+<p>调试时的核心反汇编输出如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">fffff806`ca714a2e 488b0583126b00  mov rax,qword ptr [nt!PspCidTable (fffff806`cadc5cb8)]</span><br><span class="line">...</span><br><span class="line">fffff803`16425cc4 e8a7010000      call nt!PspReferenceCidTableEntry (fffff803`16425e70)</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>小技巧：<code>48 8B 05</code> 在函数里可能命中多处，先通过 <code>call</code> 跳板锁定 <code>PspReferenceCidTableEntry</code>，再在其内部搜 <code>mov</code>，命中率更高——把调用链当路标。</p>
+</blockquote>
+<p>核心实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">PVOID <span class="title function_">GetPspCidTable</span><span class="params">()</span> &#123;</span><br><span class="line">    PVOID PsLookupProcessByProcessIdAddr = (PVOID)PsLookupProcessByProcessId;</span><br><span class="line">    PUCHAR StartSearchAddress = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 第一步：在 PsLookupProcessByProcessId 内搜索 call 指令（0xE8）</span></span><br><span class="line">    UCHAR pSpecialCode1[<span class="number">1</span>] = &#123; <span class="number">0xE8</span> &#125;;</span><br><span class="line">    PVOID result = SearchSpecialCode(PsLookupProcessByProcessIdAddr, <span class="number">0x100</span>, pSpecialCode1, <span class="number">1</span>);</span><br><span class="line">    <span class="keyword">if</span> (result != <span class="literal">NULL</span>) &#123;</span><br><span class="line">        <span class="comment">// call 相对偏移：目标地址 = 指令地址 + 5 + disp32</span></span><br><span class="line">        LONG offset = *(PLONG)((PUCHAR)result + <span class="number">1</span>);</span><br><span class="line">        StartSearchAddress = (PUCHAR)((PUCHAR)result + <span class="number">5</span> + offset);  <span class="comment">// 得到 PspReferenceCidTableEntry</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        StartSearchAddress = (PUCHAR)PsLookupProcessByProcessIdAddr;  <span class="comment">// 降级：直接从头搜索</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 第二步：在 PspReferenceCidTableEntry 内搜索 mov rax, [rip+disp32]（48 8B 05）</span></span><br><span class="line">    UCHAR pSpecialCode2[<span class="number">3</span>] = &#123; <span class="number">0x48</span>, <span class="number">0x8B</span>, <span class="number">0x05</span> &#125;;</span><br><span class="line">    result = SearchSpecialCode(StartSearchAddress, <span class="number">0x100</span>, pSpecialCode2, <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">if</span> (<span class="literal">NULL</span> == result) <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">    LONG offset = *(PLONG)((PUCHAR)result + <span class="number">3</span>);</span><br><span class="line">    <span class="keyword">return</span> (PVOID)((PUCHAR)result + <span class="number">7</span> + offset);  <span class="comment">// mov rax,[rip+disp] 指令长 7 字节</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>（关键逻辑如上，完整工程代码参照 LyShark实现 补齐。）</p>
+<h2 id="4-遍历-PspCidTable"><a href="#4-遍历-PspCidTable" class="headerlink" title="4. 遍历 PspCidTable"></a>4. 遍历 PspCidTable</h2><p>拿到 PspCidTable 地址后，按 <code>TableCode</code> 的级数逐级遍历。整体流程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">PspCidTable</span><br><span class="line">  ↓ 解析 TableCode（级数 + 基址）</span><br><span class="line">遍历有效 Entry</span><br><span class="line">  ↓ 解码 Entry 得到对象体地址</span><br><span class="line">ObGetObjectType 判断是否为进程对象</span><br><span class="line">  ↓</span><br><span class="line">handle 值即 PID，收进结果数组</span><br><span class="line">  ↓</span><br><span class="line">生成第二份进程列表 B</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-1-解析-TableCode"><a href="#4-1-解析-TableCode" class="headerlink" title="4.1 解析 TableCode"></a>4.1 解析 TableCode</h3><p>注意 <code>PspCidTable</code> 变量里存的是 <code>HANDLE_TABLE*</code>，取 TableCode 要<strong>两级解引用</strong>：先读变量得表地址，再偏移 <code>+8</code> 读 TableCode 字段。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">ULONG64 ul_tableCode = *(PULONG64)(((ULONG64)*(PULONG64)TableBase) + <span class="number">8</span>);</span><br><span class="line">INT i_low2 = ul_tableCode &amp; <span class="number">3</span>;   <span class="comment">// 表级数</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (i_low2 == <span class="number">0</span>)      parse_table_1(ul_tableCode &amp; ~<span class="number">3</span>, <span class="number">0</span>, <span class="number">0</span>, Callback, Context); <span class="comment">// 单级</span></span><br><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (i_low2 == <span class="number">1</span>) parse_table_2(ul_tableCode &amp; ~<span class="number">3</span>, <span class="number">0</span>, Callback, Context);    <span class="comment">// 二级</span></span><br><span class="line"><span class="keyword">else</span> <span class="keyword">if</span> (i_low2 == <span class="number">2</span>) parse_table_3(ul_tableCode &amp; ~<span class="number">3</span>, Callback, Context);       <span class="comment">// 三级</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="4-2-逐级遍历"><a href="#4-2-逐级遍历" class="headerlink" title="4.2 逐级遍历"></a>4.2 逐级遍历</h3><p>三级表：在当前观察到的 x64 版本中，每层通常是 512 项的指针数组（每项 8 字节），逐级取指针，最底层是 Entry 数组（每项 16 字节）。这里的层级、数量和字段布局不是稳定的公开接口，必须按目标系统版本验证。<code>MmIsAddressValid</code> 只能作为有限的预检，不能替代对象生命周期管理或并发同步。</p>
+<h3 id="4-3-Entry-解码（当前版本假设）"><a href="#4-3-Entry-解码（当前版本假设）" class="headerlink" title="4.3 Entry 解码（当前版本假设）"></a>4.3 Entry 解码（当前版本假设）</h3><p>在当前参考实现假设下，PspCidTable 使用“锁定句柄”格式，Entry 的低 16 位是引用计数或属性位，对象体地址需要这样解码（右移 16 位并按 16 字节对齐）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ULONG64 ul_decode = (LONG64)ul_recode &gt;&gt; <span class="number">0x10</span>;</span><br><span class="line">ul_decode &amp;= <span class="number">0xfffffffffffffff0</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="4-4-Client-ID-与-PID-的对应关系"><a href="#4-4-Client-ID-与-PID-的对应关系" class="headerlink" title="4.4 Client ID 与 PID 的对应关系"></a>4.4 Client ID 与 PID 的对应关系</h3><p>在 CID 表语义下，条目的 Client ID 数值可以对应 PID 或 TID；只有通过对象类型判断为进程对象后，才能将其作为 PID 收集。当前参考实现假设每个 Entry 承载 4 个 PID 槽位，handle 编码为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">handle = i * 4 + 1024 * index1 + 512 * index2 * 1024</span><br></pre></td></tr></table></figure>
+
+<p><strong>PID 必然是 4 的倍数</strong>——这也解释了之前暴力扫描为什么能以 4 为步长对齐。进程对象判断用对象管理器 API，配合异常保护：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> BOOLEAN <span class="title function_">ProcessEnumCallback</span><span class="params">(HANDLEINFO* pHandleInfo, PVOID Context)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (!pHandleInfo-&gt;Object || !MmIsAddressValid(pHandleInfo-&gt;Object))</span><br><span class="line">        <span class="keyword">return</span> TRUE;  <span class="comment">// 无效 Entry 跳过</span></span><br><span class="line">    _try &#123;</span><br><span class="line">        <span class="keyword">if</span> (ObGetObjectType(pHandleInfo-&gt;Object) == *PsProcessType) &#123;</span><br><span class="line">            <span class="comment">// handle 直接作为 PID 存入数组</span></span><br><span class="line">            EnumContext-&gt;ProcessArray[EnumContext-&gt;ProcessCount++] = pHandleInfo-&gt;Handle;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    _except(EXCEPTION_EXECUTE_HANDLER) &#123;</span><br><span class="line">        <span class="comment">// 对象可能已被释放，异常时跳过而非蓝屏</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> TRUE;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="5-与现有方案的关系和验证意义"><a href="#5-与现有方案的关系和验证意义" class="headerlink" title="5. 与现有方案的关系和验证意义"></a>5. 与现有方案的关系和验证意义</h2><p>PID 暴力枚举的表面形式是遍历 PID 数值，但每次查询仍然依赖 <code>PsLookupProcessByProcessId</code> 访问内核维护的 CID 映射。因此，它与直接遍历 <code>PspCidTable</code> 并不是两个独立的数据源。</p>
+<p>两种方案的主要区别在于访问路径：</p>
+<ul>
+<li><strong>间接 CID 查询</strong>：遍历候选 PID，通过公开 API 查询对应的进程对象；</li>
+<li><strong>直接 CID 表遍历</strong>：定位并解析私有的 <code>PspCidTable</code>，再根据对象类型筛选进程对象。</li>
+</ul>
+<h2 id="6-实验设计"><a href="#6-实验设计" class="headerlink" title="6. 实验设计"></a>6. 实验设计</h2><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>间接 CID 查询</th>
+<th>直接 CID 表遍历</th>
+<th>预期结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>正常进程</td>
+<td>✓</td>
+<td>✓</td>
+<td>正常</td>
+</tr>
+<tr>
+<td>ActiveProcessLinks 隐藏</td>
+<td>✗</td>
+<td>✓</td>
+<td>检出</td>
+</tr>
+<tr>
+<td>PspCidTable 隐藏</td>
+<td>✓</td>
+<td>✗</td>
+<td>检出</td>
+</tr>
+<tr>
+<td>两边同时隐藏</td>
+<td>✗</td>
+<td>✗</td>
+<td>多源方案仍有盲区</td>
+</tr>
+</tbody></table>
+<p>从最后一行可以得出结论：<strong>检测机制不是”万能探测器”，而是攻击面与数据源之间的博弈</strong>——每多一个可信数据源，攻击者就得多篡改一个地方，但盲区始终存在。</p>
+<h2 id="7-遇到的问题"><a href="#7-遇到的问题" class="headerlink" title="7. 遇到的问题"></a>7. 遇到的问题</h2><ol>
+<li><strong>两级解引用</strong>：一开始只解了一次引用，把 <code>PspCidTable</code> 变量地址当成了表地址，遍历全乱；后来意识到它是 <code>HANDLE_TABLE*</code>。</li>
+<li><strong>遍历次数困惑</strong>：参考实现里一级表循环写的是 <code>for (i &lt; 512) // 256?</code>，作者自己也标了疑惑——表大小 4K &#x2F; 每项 16B 应该是 256 项，实际循环却写 512 次，这部分涉及每个 Entry 承载 4 个 handle 的映射，还需要再验证。</li>
+<li><strong>并发修改</strong>：遍历过程中 <code>TableCode</code> 和各级表可能被句柄增删或扩容修改。未经确认不应直接依赖内部锁；当前方案只能接受轻微不一致，后续需要评估版本相关的快照、重试或结果去重策略。</li>
+</ol>
+<h2 id="8-展望"><a href="#8-展望" class="headerlink" title="8. 展望"></a>8. 展望</h2><ul>
+<li>在 Win10、Win11 等目标版本上分别确认 <code>HANDLE_TABLE</code> 布局、<code>TableCode</code> 层级、Entry 数量和对象指针编码；</li>
+<li>为直接遍历逻辑增加版本识别、特征匹配失败处理、遍历边界检查和结果去重，避免把私有结构当作稳定接口；</li>
+<li>通过正常进程创建和退出、PID 较大进程、并发表扩容等场景验证遍历稳定性；</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li>Windows Internals, 7th Edition（PspCidTable &#x2F; HANDLE_TABLE 相关章节）</li>
+<li>ReactOS 源码（HANDLE_TABLE &#x2F; PspCidTable 的开放实现参考）</li>
+<li>LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（<a target="_blank" rel="noopener" href="https://www.lyshark.com/post/93beefb4.html%EF%BC%89">https://www.lyshark.com/post/93beefb4.html）</a></li>
+<li>本系列前篇：SnowSword–进程隐藏检测实现（PID 暴力扫描方案）</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="http://example.com">Snow</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/">http://example.com/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="http://example.com" target="_blank">Snow的技术博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Anti-Rootkit/">Anti-Rootkit</a><a class="post-meta__tags" href="/tags/Windows-Kernel/">Windows Kernel</a><a class="post-meta__tags" href="/tags/PspCidTable/">PspCidTable</a><a class="post-meta__tags" href="/tags/%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE/">进程枚举</a><a class="post-meta__tags" href="/tags/%E5%86%85%E6%A0%B8%E9%80%86%E5%90%91/">内核逆向</a></div><div class="post-share"><div class="social-share" data-image="/images/14.jpg" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/" title="从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</div></div><div class="info-2"><div class="info-item-1">恶意样本逆向分析思考</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/08/04/SnowSword-%E8%BF%9B%E7%A8%8B%E9%9A%90%E8%97%8F%E6%A3%80%E6%B5%8B-%E4%BF%AE%E6%AD%A3%E7%89%88/" title="SnowSword--进程隐藏检测实现：从用户态枚举到内核对象分析"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-08-04</div><div class="info-item-2">SnowSword--进程隐藏检测实现：从用户态枚举到内核对象分析</div></div><div class="info-2"><div class="info-item-1">介绍SnowSword中隐藏进程检测模块的设计思路，从用户态进程枚举API到内核EPROCESS对象分析，通过多种视角交叉验证发现异常进程。</div></div></div></a></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Snow</div><div class="author-info-description">网络安全个人技术博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">22</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/xxxxxx"><i class="fab fa-github"></i><span>Follow Me</span></a></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E7%BC%98%E8%B5%B7%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E8%BF%98%E9%9C%80%E8%A6%81%E7%AC%AC%E4%BA%8C%E7%A7%8D%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E8%A7%86%E8%A7%92"><span class="toc-number">1.</span> <span class="toc-text">1. 缘起：为什么还需要第二种进程枚举视角</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-PspCidTable-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">2.</span> <span class="toc-text">2. PspCidTable 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-%E5%A6%82%E4%BD%95%E5%AE%9A%E4%BD%8D-PspCidTable"><span class="toc-number">3.</span> <span class="toc-text">3. 如何定位 PspCidTable</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-%E9%81%8D%E5%8E%86-PspCidTable"><span class="toc-number">4.</span> <span class="toc-text">4. 遍历 PspCidTable</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E8%A7%A3%E6%9E%90-TableCode"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 解析 TableCode</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E9%80%90%E7%BA%A7%E9%81%8D%E5%8E%86"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 逐级遍历</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-Entry-%E8%A7%A3%E7%A0%81%EF%BC%88%E5%BD%93%E5%89%8D%E7%89%88%E6%9C%AC%E5%81%87%E8%AE%BE%EF%BC%89"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 Entry 解码（当前版本假设）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4-Client-ID-%E4%B8%8E-PID-%E7%9A%84%E5%AF%B9%E5%BA%94%E5%85%B3%E7%B3%BB"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 Client ID 与 PID 的对应关系</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-%E4%B8%8E%E7%8E%B0%E6%9C%89%E6%96%B9%E6%A1%88%E7%9A%84%E5%85%B3%E7%B3%BB%E5%92%8C%E9%AA%8C%E8%AF%81%E6%84%8F%E4%B9%89"><span class="toc-number">5.</span> <span class="toc-text">5. 与现有方案的关系和验证意义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-%E5%AE%9E%E9%AA%8C%E8%AE%BE%E8%AE%A1"><span class="toc-number">6.</span> <span class="toc-text">6. 实验设计</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#7-%E9%81%87%E5%88%B0%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">7.</span> <span class="toc-text">7. 遇到的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#8-%E5%B1%95%E6%9C%9B"><span class="toc-number">8.</span> <span class="toc-text">8. 展望</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83"><span class="toc-number">9.</span> <span class="toc-text">参考</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/" title="PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历">PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</a><time datetime="2026-08-15T03:10:00.000Z" title="发表于 2026-08-15 11:10:00">2026-08-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/" title="从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践">从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</a><time datetime="2026-08-09T06:00:00.000Z" title="发表于 2026-08-09 14:00:00">2026-08-09</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/08/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/" title="第二周学习记录：第一次恶意样本逆向分析实践">第二周学习记录：第一次恶意样本逆向分析实践</a><time datetime="2026-08-08T12:51:00.000Z" title="发表于 2026-08-08 20:51:00">2026-08-08</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/04/SnowSword-%E8%BF%9B%E7%A8%8B%E9%9A%90%E8%97%8F%E6%A3%80%E6%B5%8B-%E4%BF%AE%E6%AD%A3%E7%89%88/" title="SnowSword--进程隐藏检测实现：从用户态枚举到内核对象分析">SnowSword--进程隐藏检测实现：从用户态枚举到内核对象分析</a><time datetime="2026-08-04T13:05:00.000Z" title="发表于 2026-08-04 21:05:00">2026-08-04</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/01/%E6%97%A5%E6%8A%A5_PEPEPE_%E5%B7%B2%E7%9F%A5%E6%98%8E%E6%96%87%E6%94%BB%E5%87%BB/" title="[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥">[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥</a><time datetime="2026-08-01T12:00:00.000Z" title="发表于 2026-08-01 20:00:00">2026-08-01</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Snow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.6.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.6.1"></script><script src="/js/main.js?v=5.6.1"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
