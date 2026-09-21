@@ -1,0 +1,347 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>SnowSword | Snow</title><meta name="author" content="Snow"><meta name="copyright" content="Snow"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="SnowSword —— 面向 Windows 10&#x2F;11 x64 的 Kernel Analysis &amp; Anti-Rootkit 工具的能力清单与验证边界：进程&#x2F;线程与驱动分析、IRP Dispatch 与内核表检查、Hook 与回调枚举、隐藏进程&#x2F;驱动检测、文件系统 raw 分析与内核监控。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="SnowSword">
+<meta property="og:url" content="https://user-lzy.github.io/snowsword/index.html">
+<meta property="og:site_name" content="Snow">
+<meta property="og:description" content="SnowSword —— 面向 Windows 10&#x2F;11 x64 的 Kernel Analysis &amp; Anti-Rootkit 工具的能力清单与验证边界：进程&#x2F;线程与驱动分析、IRP Dispatch 与内核表检查、Hook 与回调枚举、隐藏进程&#x2F;驱动检测、文件系统 raw 分析与内核监控。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://user-lzy.github.io/images/14.jpg">
+<meta property="article:published_time" content="2026-09-21T02:00:00.000Z">
+<meta property="article:modified_time" content="2026-09-21T15:23:14.378Z">
+<meta property="article:author" content="Snow">
+<meta property="article:tag" content="Windows Kernel Security, Anti-Rootkit, Windows Driver Development, Reverse Engineering, Malware Analysis, SnowSword, Windows Internals, 内核安全, 驱动开发, 逆向工程">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://user-lzy.github.io/images/14.jpg"><script type="application/ld+json"></script><link rel="shortcut icon" href="/images/favicon.svg"><link rel="canonical" href="https://user-lzy.github.io/snowsword/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.6.1"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        const data = { value }
+
+        if (ttl != null) {
+          data.expiry = Date.now() + ttl * 86400000
+        }
+
+        localStorage.setItem(key, JSON.stringify(data))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', 'undefined')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', 'undefined')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'SnowSword',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'page'
+}</script><link rel="stylesheet" href="/css/custom.css"><meta name="generator" content="Hexo 8.1.2"><link rel="alternate" href="/atom.xml" title="Snow" type="application/atom+xml">
+</head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/snowsword/"><i class="fa-fw fa-solid fa-shield-halved"></i><span> SnowSword</span></a></div><div class="menus_item"><a class="site-page" href="/featured/"><i class="fa-fw fa-solid fa-star"></i><span> 精选</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div></div></div><div class="page" id="body-wrap"><header class="not-home-page" id="page-header"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Snow</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fa-solid fa-house"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/snowsword/"><i class="fa-fw fa-solid fa-shield-halved"></i><span> SnowSword</span></a></div><div class="menus_item"><a class="site-page" href="/featured/"><i class="fa-fw fa-solid fa-star"></i><span> 精选</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fa-solid fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fa-solid fa-folder"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fa-solid fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fa-solid fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="page-site-info"><h1 id="site-title">SnowSword</h1></div></header><main class="layout" id="content-inner"><div id="page"><div class="container" id="article-container"><div class="sw-hero">
+  <p class="sw-hero__name">SnowSword</p>
+  <p class="sw-hero__focus">Windows 10/11 x64 Kernel Analysis &amp; Anti-Rootkit Toolkit</p>
+  <p class="sw-hero__desc">从用户态枚举到内核对象分析，用多个独立视角交叉验证内核中的隐藏痕迹，并输出可复核的证据而不是“可疑”结论。</p>
+  <div class="sw-hero__actions">
+    <a class="sw-hero__primary" href="https://github.com/user-lzy/SnowSword" target="_blank" rel="noopener"><i class="fab fa-github"></i><span>GitHub</span></a>
+    <a href="/featured/"><i class="fa-solid fa-star"></i><span>精选文章</span></a>
+    <a href="/tags/SnowSword/"><i class="fa-solid fa-tags"></i><span>相关文章</span></a>
+  </div>
+</div>
+
+<h2 id="项目定位"><a href="#项目定位" class="headerlink" title="项目定位"></a>项目定位</h2><p>SnowSword 是一个面向 <strong>Windows 10 &#x2F; 11 x64</strong> 的内核分析与反 Rootkit 工具，目标是内核对象的<strong>枚举、交叉验证与证据输出</strong>：</p>
+<ul>
+<li>把内核态采集（对象管理器、内核地址空间）与用户态职责（集合运算、路径格式化、结果关联与展示）分层，驱动侧尽量薄；</li>
+<li>对同一类隐蔽技术，用<strong>多个互相独立的视角</strong>采集，再按映像基址关联，输出差异集合与置信等级，而不是直接判定“恶意”；</li>
+<li>承认误报与漏报：输出“需要人工复核”的条目，并把采集失败的字段标记为“未知”，而不是用硬编码偏移继续访问。</li>
+</ul>
+<div class="note blue flat"><p>本页能力清单以<strong>项目作者确认的信息</strong>为准，并尽量标注对应的公开记录。已实现但本博客尚未单独成文的条目也会列出（只写能力名称，不补写未经验证的实现细节）；未成立或未验证的部分统一放在<a href="#%E9%AA%8C%E8%AF%81%E7%8A%B6%E6%80%81%E4%B8%8E%E8%BE%B9%E7%95%8C">验证状态与边界</a>与<a href="#%E5%90%8E%E7%BB%AD%E6%96%B9%E5%90%91">后续方向</a>。</p>
+</div>
+
+<h2 id="平台与环境"><a href="#平台与环境" class="headerlink" title="平台与环境"></a>平台与环境</h2><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>目标系统</td>
+<td>Windows 10 &#x2F; 11 x64</td>
+</tr>
+<tr>
+<td>采集层</td>
+<td>内核态驱动（对象管理器、内核地址空间、安全内存读取）</td>
+</tr>
+<tr>
+<td>交互层</td>
+<td>用户态 CLI：<code>--cli</code> 交互、<code>-c</code> 单次命令、<code>--agent-pipe</code> 长连接、<code>--format json</code> JSON 输出</td>
+</tr>
+<tr>
+<td>权限模型</td>
+<td>EXE 以 <code>requireAdministrator</code> 运行；内核级操作需要 <code>--force</code></td>
+</tr>
+<tr>
+<td>调试与验证</td>
+<td>WinDbg、DebugView、符号验证、隔离虚拟机中的对照测试</td>
+</tr>
+</tbody></table>
+<h2 id="已实现能力"><a href="#已实现能力" class="headerlink" title="已实现能力"></a>已实现能力</h2><p>以下为本项目当前已实现的能力（依项目作者确认的信息整理）。已在博客中单独成文的条目会引到对应文章；未附引用的条目表示本博客暂未单独成文，不代表未实现。本清单只列能力名称与已有记录，不对各能力的成熟度或稳定性作额外断言。</p>
+<h3 id="进程与线程分析"><a href="#进程与线程分析" class="headerlink" title="进程与线程分析"></a>进程与线程分析</h3><ul>
+<li>Process &#x2F; Thread &#x2F; Module &#x2F; Window &#x2F; Memory &#x2F; Privilege 等进程维度的枚举与分析</li>
+<li>Kernel thread suspend &#x2F; resume</li>
+</ul>
+<h3 id="驱动与设备对象"><a href="#驱动与设备对象" class="headerlink" title="驱动与设备对象"></a>驱动与设备对象</h3><ul>
+<li>Driver &#x2F; Device Object &#x2F; Device Stack 的枚举与关系分析</li>
+<li>IRP Dispatch 检查</li>
+</ul>
+<h3 id="内核表与-Hook-检查"><a href="#内核表与-Hook-检查" class="headerlink" title="内核表与 Hook 检查"></a>内核表与 Hook 检查</h3><ul>
+<li>SSDT &#x2F; ShadowSSDT</li>
+<li>IDT &#x2F; GDT，含多核检查</li>
+<li>Ob callbacks（对象回调）</li>
+<li>ExCallback 枚举</li>
+<li>Minifilter &#x2F; Instance 枚举</li>
+<li>User-mode Inline &#x2F; IAT &#x2F; EAT Hook 扫描</li>
+</ul>
+<h3 id="隐藏驱动检测"><a href="#隐藏驱动检测" class="headerlink" title="隐藏驱动检测"></a>隐藏驱动检测</h3><ul>
+<li><strong>视角一：内核模块列表</strong>。使用 <code>SystemModuleInformation</code>（源自内核维护的已加载模块链表）获取驱动路径、映像基址与映像大小。两阶段查询处理不固定缓冲区大小，并对结构版本与路径编码做兼容处理。</li>
+<li><strong>视角二：对象管理器驱动对象</strong>。从对象管理器命名空间获取 <code>DRIVER_OBJECT</code>，覆盖 <code>\Driver</code>、<code>\FileSystem</code>，以及 <strong><code>\FileSystem\Filters</code> 子目录</strong>（MiniFilter 的驱动对象在这里，漏掉子目录会导致视野不完整）。按基址与模块列表关联，并处理引用计数纪律。</li>
+<li><strong>视角三：内核内存 PE 特征扫描</strong>。扫描内核驱动区内存，用两级特征校验找出“带 PE 头却不在模块列表里”的可执行镜像，用于应对既摘链 <code>PsLoadedModuleList</code>、又不注册 <code>\Driver</code> 对象的情况。扫描范围不是“全内存”，而是有界的内核映像区。</li>
+<li><strong>结果关联与分级</strong>：按映像基址做集合差集，标注来源视角（模块列表 &#x2F; 对象目录 &#x2F; 内存扫描）、来源数（双视角 &#x2F; 三视角）与状态（已知模块、对象关联、游离 PE、需人工复核）。采集失败的条目单独标记，不混入隐藏候选。</li>
+</ul>
+<h3 id="隐藏进程检测"><a href="#隐藏进程检测" class="headerlink" title="隐藏进程检测"></a>隐藏进程检测</h3><ul>
+<li><strong>用户态枚举与内核对象分析交叉验证</strong>：从用户态枚举 API 的视角与内核 <code>EPROCESS</code> 对象的视角分别建立集合，交叉比对发现异常进程，而不是只依赖单一 API 的返回值。</li>
+<li><strong>PspCidTable 进程枚举</strong>：作为第二种进程枚举视角，通过 <code>PsLookupProcessByProcessId</code> 的 call 跳板逆向定位 <code>PspCidTable</code> 地址，按 <code>TableCode</code> 级数逐级遍历句柄表，用 <code>ObGetObjectType</code> 过滤进程对象，handle 值即 PID。</li>
+</ul>
+<h3 id="文件系统"><a href="#文件系统" class="headerlink" title="文件系统"></a>文件系统</h3><ul>
+<li>NTFS raw analysis</li>
+<li>FAT32 相关能力</li>
+</ul>
+<h3 id="监控与行为检测"><a href="#监控与行为检测" class="headerlink" title="监控与行为检测"></a>监控与行为检测</h3><ul>
+<li>ETW &#x2F; kernel debug monitoring</li>
+<li>HIPS 相关能力（行为链检测方向）</li>
+</ul>
+<h3 id="枚举与查询（CLI）"><a href="#枚举与查询（CLI）" class="headerlink" title="枚举与查询（CLI）"></a>枚举与查询（CLI）</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>process list</code></td>
+<td>用户态进程枚举（PID &#x2F; PPID &#x2F; 名称 &#x2F; 路径）</td>
+</tr>
+<tr>
+<td><code>thread list --pid &lt;N&gt;</code></td>
+<td>指定进程的线程枚举（TID、优先级、状态、ETHREAD、Teb、所属模块等）</td>
+</tr>
+<tr>
+<td><code>thread callstack --pid &lt;N&gt; --tid &lt;N&gt;</code></td>
+<td>线程调用栈</td>
+</tr>
+<tr>
+<td><code>module list --pid &lt;N&gt;</code></td>
+<td>指定进程的模块枚举</td>
+</tr>
+<tr>
+<td><code>kernel-module list</code></td>
+<td>内核模块列表（序号、名称、映像基址、映像大小、路径、驱动对象）</td>
+</tr>
+<tr>
+<td><code>ssdt list</code></td>
+<td>SSDT 相关查询</td>
+</tr>
+</tbody></table>
+<h3 id="内核内存安全读取"><a href="#内核内存安全读取" class="headerlink" title="内核内存安全读取"></a>内核内存安全读取</h3><p>访问内核地址前先确认当前 IRQL，并组合使用 <code>ProbeForRead</code> 预检、<code>MmCopyMemory</code> 安全拷贝与 <code>__try / __except</code> 兜底；读取私有结构时还要考虑对象并发销毁与字段被修改的情况。这三者各自解决的问题不同，不能把其中任何一个当成“绝对安全”的保证。</p>
+<h3 id="破坏性操作的确认机制"><a href="#破坏性操作的确认机制" class="headerlink" title="破坏性操作的确认机制"></a>破坏性操作的确认机制</h3><p><code>process kill</code> 一类用户态破坏性操作会先输出 <code>WARNING: Destructive operation ... Confirm? [y/N]:</code>，由调用方明确回复后执行；需要驱动的内核级操作（<code>needsDriver=True</code>）使用 <code>--force</code> 显式表达意图。工具不会为了方便而自动应答确认。</p>
+<h2 id="检测模型"><a href="#检测模型" class="headerlink" title="检测模型"></a>检测模型</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">不同来源采集</span><br><span class="line">  ├─ 模块列表集合</span><br><span class="line">  ├─ DRIVER_OBJECT 集合（\Driver / \FileSystem / \FileSystem\Filters）</span><br><span class="line">  └─ 内存 PE 候选集合</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">按基址与名称关联</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">输出差异与证据（来源视角 / 来源数 / 状态）</span><br><span class="line">        │</span><br><span class="line">        ▼</span><br><span class="line">人工复核后再做结论</span><br></pre></td></tr></table></figure>
+
+<p>这套设计不能保证发现所有内核隐蔽技术，但能让攻击者必须同时处理更多独立痕迹，也让检测结果比单一列表更容易解释和复核。</p>
+<h2 id="验证状态与边界"><a href="#验证状态与边界" class="headerlink" title="验证状态与边界"></a>验证状态与边界</h2><p>下面是<strong>验证状态</strong>上的缺口，不是“未实现的功能”清单：上面列出的能力已经在项目中实现，只是下列场景目前还没有公开的复现记录或对照数据。</p>
+<ul>
+<li>缺少干净系统基线与多次重复测试；</li>
+<li>模块、对象目录和内存候选的逐项对照尚未补齐；</li>
+<li>尚缺扫描耗时、CPU 占用和 IOCTL 次数的性能数据；</li>
+<li>非分页池定位、清除 PE 头等场景尚未验证；</li>
+<li><code>OBJECT_DIRECTORY</code>、<code>LDR_DATA_TABLE_ENTRY</code> 等内核私有结构随版本变化，跨 Windows 版本的适配与验证仍在进行中；</li>
+<li>对照测试只能证明两个工具在特定测试状态下枚举结果不同，不能据此断言某个工具一定正确，也不能外推到所有隐藏方式。</li>
+</ul>
+<h2 id="后续方向"><a href="#后续方向" class="headerlink" title="后续方向"></a>后续方向</h2><ul>
+<li>批量化内存扫描，并比较逐页与批量 IOCTL 的扫描时间、CPU 与请求数量；</li>
+<li>研究非分页池定位；</li>
+<li>为 <code>DRIVER_OBJECT</code> 增加多特征交叉校验，降低误报；</li>
+<li>把 WinDbg 验证信息纳入结果报告；</li>
+<li>按“基线 → 正常驱动 → 摘链场景 → 性能 → 兼容性”的顺序补全证据链，每个阶段固定保存系统版本、模块集合、对象集合与耗时。</li>
+</ul>
+<h2 id="相关文章"><a href="#相关文章" class="headerlink" title="相关文章"></a>相关文章</h2><ul>
+<li><a href="/2026/08/23/SnowSword-%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%8E%9F%E7%90%86%E4%B8%8E%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0/">SnowSword 隐藏驱动检测原理与工程实现：从多视角枚举到结果关联</a></li>
+<li><a href="/2026/08/21/%E6%97%A5%E6%8A%A5_SnowSword%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/">SnowSword 隐藏驱动检测实测：摘链驱动的识别</a></li>
+<li><a href="/2026/08/15/%E6%97%A5%E6%8A%A5_%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B_%E6%94%B9%E8%BF%9B%E7%89%88/">隐藏驱动检测学习记录 —— 枚举 \Driver 与 \FileSystem 的多视角交叉验证</a></li>
+<li><a href="/2026/08/16/%E6%97%A5%E6%8A%A5_%E5%86%85%E5%AD%98%E6%9A%B4%E5%8A%9B%E6%90%9C%E7%B4%A2DRIVER_OBJECT_%E6%94%B9%E8%BF%9B%E7%89%88/">内存暴力搜索隐藏驱动 —— PE 特征扫描 + 模块列表差集</a></li>
+<li><a href="/2026/08/04/SnowSword-%E8%BF%9B%E7%A8%8B%E9%9A%90%E8%97%8F%E6%A3%80%E6%B5%8B-%E4%BF%AE%E6%AD%A3%E7%89%88/">SnowSword 进程隐藏检测实现：从用户态枚举到内核对象分析</a></li>
+<li><a href="/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/">PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</a></li>
+<li><a href="/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/">SnowWall 检测实测：从实验环境到结果复核</a></li>
+</ul>
+<p>完整的自动聚合列表见 <a href="/tags/SnowSword/">标签：SnowSword</a> 与 <a href="/categories/SnowSword-Development/">分类：SnowSword Development</a>。</p>
+<h2 id="源码"><a href="#源码" class="headerlink" title="源码"></a>源码</h2><p>SnowSword 目前以个人项目形式开发，仓库入口：<a target="_blank" rel="noopener" href="https://github.com/user-lzy/SnowSword">github.com&#x2F;user-lzy&#x2F;SnowSword</a>。</p>
+<blockquote>
+<p>本页描述的是项目当前状态，会随实现推进而更新；与研究记录类文章相比，这里的结论更保守——只有经过实测并保留证据的结论才会写进来。</p>
+</blockquote>
+</div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="/images/14.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Snow</div><div class="author-info-description">Windows Kernel Security · Anti-Rootkit · Reverse Engineering</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">15</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/user-lzy"><i class="fab fa-github"></i><span>GitHub</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/user-lzy" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a><a class="social-icon" href="/atom.xml" target="_blank" title="RSS"><i class="fas fa-rss" style="color: #f26522;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Windows 10/11 x64 Kernel Analysis &amp; Anti-Rootkit Toolkit<p class="sw-card-links"><a href="/snowsword/">项目主页</a><a href="/featured/">精选文章</a></p></div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/" title="SnowWall 检测实测：从实验环境到结果复核">SnowWall 检测实测：从实验环境到结果复核</a><time datetime="2026-08-29T00:00:00.000Z" title="发表于 2026-08-29 08:00:00">2026-08-29</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/28/%E7%AC%AC%E5%8D%81%E4%B8%89%E7%AF%87%E6%97%A5%E6%8A%A5_%E4%BC%AA%E8%A3%85%E5%85%A5%E5%8F%A3%E4%B8%8E%E9%9A%90%E8%97%8FPE%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/" title="伪装入口与内存中的隐藏 PE：Hideit 样本逆向分析记录">伪装入口与内存中的隐藏 PE：Hideit 样本逆向分析记录</a><time datetime="2026-08-28T14:00:00.000Z" title="发表于 2026-08-28 22:00:00">2026-08-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/28/yinhu-vm-analysis-diary/" title="银狐木马虚拟机分析日报">银狐木马虚拟机分析日报</a><time datetime="2026-08-28T12:00:00.000Z" title="发表于 2026-08-28 20:00:00">2026-08-28</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/23/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AF%87%E6%97%A5%E6%8A%A5_PyInstaller%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/" title="PyInstaller 加固样本逆向：从 CArchive 修复到 pyc 反编译">PyInstaller 加固样本逆向：从 CArchive 修复到 pyc 反编译</a><time datetime="2026-08-23T12:00:00.000Z" title="发表于 2026-08-23 20:00:00">2026-08-23</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/08/23/SnowSword-%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%8E%9F%E7%90%86%E4%B8%8E%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0/" title="SnowSword 隐藏驱动检测原理与工程实现：从多视角枚举到结果关联">SnowSword 隐藏驱动检测原理与工程实现：从多视角枚举到结果关联</a><time datetime="2026-08-23T08:00:00.000Z" title="发表于 2026-08-23 16:00:00">2026-08-23</time></div></div></div></div><div class="card-widget card-categories"><div class="item-headline">
+            <i class="fas fa-folder-open"></i>
+            <span>分类</span>
+            
+          </div>
+          <ul class="card-category-list" id="aside-cat-list">
+            <li class="card-category-list-item "><a class="card-category-list-link" href="/categories/CTF/"><span class="card-category-list-name">CTF</span><span class="card-category-list-count">1</span></a><ul class="card-category-list child"><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/CTF/Reverse-Engineering/"><span class="card-category-list-name">Reverse Engineering</span><span class="card-category-list-count">1</span></a></li></ul></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Malware-Analysis/"><span class="card-category-list-name">Malware Analysis</span><span class="card-category-list-count">4</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Reverse-Engineering/"><span class="card-category-list-name">Reverse Engineering</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/SnowSword-Development/"><span class="card-category-list-name">SnowSword Development</span><span class="card-category-list-count">4</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/Windows-Kernel/"><span class="card-category-list-name">Windows Kernel</span><span class="card-category-list-count">3</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/"><span class="card-category-list-name">学习笔记</span><span class="card-category-list-count">1</span></a></li><li class="card-category-list-item "><a class="card-category-list-link" href="/categories/%E6%8A%80%E6%9C%AF%E6%95%99%E7%A8%8B/"><span class="card-category-list-name">技术教程</span><span class="card-category-list-count">1</span></a></li>
+          </ul></div><div class="card-widget card-tags"><div class="item-headline"><i class="fas fa-tags"></i><span>标签</span></div><div class="card-tag-cloud"><a href="/tags/%E5%86%85%E5%AD%98%E5%8F%96%E8%AF%81/" style="font-size: 1.1em; color: #999">内存取证</a> <a href="/tags/Butterfly/" style="font-size: 1.1em; color: #999">Butterfly</a> <a href="/tags/%E5%AF%86%E7%A0%81%E5%AD%A6/" style="font-size: 1.1em; color: #999">密码学</a> <a href="/tags/%E5%86%85%E5%AD%98%E7%89%B9%E5%BE%81%E6%89%AB%E6%8F%8F/" style="font-size: 1.1em; color: #999">内存特征扫描</a> <a href="/tags/Reserve/" style="font-size: 1.23em; color: #999ea6">Reserve</a> <a href="/tags/ChaCha20/" style="font-size: 1.1em; color: #999">ChaCha20</a> <a href="/tags/%E5%8F%8D%E6%B7%B7%E6%B7%86/" style="font-size: 1.1em; color: #999">反混淆</a> <a href="/tags/PyInstaller/" style="font-size: 1.1em; color: #999">PyInstaller</a> <a href="/tags/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC/" style="font-size: 1.37em; color: #99a4b2">恶意样本</a> <a href="/tags/Windows-Kernel/" style="font-size: 1.5em; color: #99a9bf">Windows Kernel</a> <a href="/tags/%E7%BD%91%E7%BB%9C%E5%AE%89%E5%85%A8/" style="font-size: 1.1em; color: #999">网络安全</a> <a href="/tags/PspCidTable/" style="font-size: 1.1em; color: #999">PspCidTable</a> <a href="/tags/%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B/" style="font-size: 1.37em; color: #99a4b2">驱动检测</a> <a href="/tags/%E5%AF%B9%E8%B1%A1%E7%AE%A1%E7%90%86%E5%99%A8/" style="font-size: 1.23em; color: #999ea6">对象管理器</a> <a href="/tags/%E5%8F%8D%E5%B0%84%E5%8A%A0%E8%BD%BD/" style="font-size: 1.1em; color: #999">反射加载</a></div></div><div class="card-widget card-webinfo"><div class="item-headline"><i class="fas fa-chart-line"></i><span>网站信息</span></div><div class="webinfo"><div class="webinfo-item"><div class="item-name">文章数目 :</div><div class="item-count">15</div></div><div class="webinfo-item"><div class="item-name">最后更新时间 :</div><div class="item-count" id="last-push-date" data-lastPushDate="2026-09-21T15:31:05.882Z"><i class="fa-solid fa-spinner fa-spin"></i></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Snow</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.6.1</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.6.1"></script><script src="/js/main.js?v=5.6.1"></script><div class="js-pjax"></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索内核 / 逆向 / 样本笔记" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.6.1"></script></div></div></body></html>

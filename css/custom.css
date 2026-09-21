@@ -1,0 +1,174 @@
+/* ==========================================================================
+   Site customizations — Snow / SnowSword
+   Loaded from _config.butterfly.yml -> inject.head.
+     inject:
+       head:
+         - '<link rel="stylesheet" href="/css/custom.css">'
+
+   Scope, in order:
+     1. Homepage hero (the SnowSword project block above the post list)
+     2. Sidebar SnowSword project card
+     3. Card / code-block polish
+
+   The Butterfly theme itself is never edited; everything here only overrides
+   theme rules from the outside, so the theme can still be updated normally.
+   Colour variables come from the theme (:root / [data-theme='dark']) so light
+   and dark mode both keep working.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Homepage hero
+   Injected server-side by scripts/snowsword-hero.js into index.html only.
+   -------------------------------------------------------------------------- */
+
+.sw-hero {
+  margin-bottom: 20px;
+  padding: 26px 30px 24px;
+  border-radius: 10px;
+  /* Left rule instead of a heavy card: reads as a project header, not a post. */
+  border-left: 4px solid var(--default-bg-color);
+  background: var(--card-bg);
+  box-shadow: var(--card-box-shadow);
+}
+
+.sw-hero__name {
+  margin: 0 0 6px;
+  font-size: 1.55em;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text-highlight-color);
+}
+
+.sw-hero__focus {
+  margin: 0 0 12px;
+  font-size: .92em;
+  letter-spacing: .3px;
+  color: var(--card-meta);
+}
+
+.sw-hero__desc {
+  margin: 0 0 18px;
+  line-height: 1.8;
+  color: var(--font-color);
+}
+
+.sw-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.sw-hero__actions a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 6px;
+  font-size: .9em;
+  color: var(--btn-color);
+  background: var(--btn-bg);
+  transition: opacity .2s, background-color .2s;
+}
+
+.sw-hero__actions a:hover {
+  opacity: .88;
+}
+
+/* Primary action = SnowSword project page */
+.sw-hero__actions a.sw-hero__primary {
+  color: #fff;
+  background: var(--default-bg-color);
+}
+
+/* --------------------------------------------------------------------------
+   2. Sidebar SnowSword project card
+   The Butterfly "announcement" card is used as the project entry (see
+   _config.butterfly.yml -> aside.card_announcement). Butterfly has no per-card
+   title option, so the fixed zh-CN heading text is replaced here.
+   -------------------------------------------------------------------------- */
+
+.card-announcement .item-headline span {
+  display: none;
+}
+
+.card-announcement .item-headline::after {
+  content: "SnowSword";
+  font-weight: 600;
+}
+
+/* The default heading icon is animated (fa-shake); this site avoids idle motion. */
+.card-announcement .item-headline i {
+  animation: none;
+}
+
+.card-announcement .announcement_content {
+  font-size: .92em;
+  line-height: 1.75;
+  color: var(--font-color);
+}
+
+.sw-card-links {
+  display: flex;
+  gap: 14px;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.sw-card-links a {
+  font-size: .9em;
+}
+
+/* --------------------------------------------------------------------------
+   3. Card / code-block polish
+   -------------------------------------------------------------------------- */
+
+/* Softer, tighter shadows than the theme default: less "stacked cards",
+   more document. Overridden again for dark mode below. */
+:root {
+  --card-box-shadow: 0 1px 3px rgba(16, 24, 40, .06), 0 1px 2px rgba(16, 24, 40, .04);
+  --card-hover-box-shadow: 0 4px 12px rgba(16, 24, 40, .10);
+}
+
+[data-theme='dark'] {
+  --card-box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+  --card-hover-box-shadow: 0 4px 12px rgba(0, 0, 0, .55);
+}
+
+/* Long WinDbg / C listings must scroll, never wrap or get clipped. */
+#article-container figure.highlight,
+#article-container pre {
+  border-radius: 8px;
+}
+
+#article-container figure.highlight {
+  overflow-x: auto;
+}
+
+/* Technical articles read better with a slightly tighter heading rhythm and
+   a clear hierarchy between h2/h3, which the theme keeps quite similar. */
+#article-container h2 {
+  margin-top: 2em;
+}
+
+#article-container h3 {
+  margin-top: 1.6em;
+}
+
+/* --------------------------------------------------------------------------
+   4. Small screens
+   -------------------------------------------------------------------------- */
+
+@media screen and (max-width: 768px) {
+  .sw-hero {
+    padding: 20px 18px 18px;
+  }
+
+  .sw-hero__name {
+    font-size: 1.3em;
+  }
+
+  .sw-hero__actions a {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
