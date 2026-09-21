@@ -443,62 +443,6 @@ SnowSword 项目地址：https://github.com/user-lzy/SnowSword
       </tags>
   </entry>
   <entry>
-    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
-    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
-    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
-这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
-1. 攻击链
-2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
-
-误报高：调试器、合法软件更新机制都会调用
-绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
-漏报高：攻击者可用 Process Hollowing（无需远程线程）
-
-改进设计: 从”单点拦截”转向”行为链评分”
-3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
-3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
-
-
-
-攻击类型
-标签序列
-加分
-阈值
-
-
-
-远程线程注入
-CrossAlloc → CrossWrite → CrossThreadCreate
-+30
-80
-
-
-Process Hollowing
-Unmap → Alloc → Write → Protect_Exec
-+35
-80
-
-
-保护属性拆分
-CrossAlloc → CrossWrite → CrossProtect_Exec
-+25
-80
-
-
-4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
-]]></content>
-      <categories>
-        <category>Malware Analysis</category>
-      </categories>
-      <tags>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Windows</tag>
-        <tag>Reserve</tag>
-        <tag>恶意样本</tag>
-        <tag>HIPS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>银狐木马虚拟机分析日报</title>
     <url>/2026/08/28/yinhu-vm-analysis-diary/</url>
     <content><![CDATA[1. 缘起：从 Edge 下载的“deepseek 电脑版”这次分析的样本来自 Edge 搜索下载的所谓“deepseek 电脑版”。把它放进隔离虚拟机后，表面上几乎没有任何动作：没有明显窗口、没有稳定的网络行为、连预期中的安装流程也没有出现。
@@ -675,110 +619,65 @@ API 动态解析：函数指针表存于 .data 段，运行时经 qword_408000 ^
       <tags>
         <tag>网络安全协会暑期培训</tag>
         <tag>Windows</tag>
-        <tag>Reserve</tag>
         <tag>恶意样本</tag>
+        <tag>Reserve</tag>
         <tag>HIPS</tag>
       </tags>
   </entry>
   <entry>
-    <title>[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥</title>
-    <url>/2026/08/01/%E6%97%A5%E6%8A%A5_PEPEPE_%E5%B7%B2%E7%9F%A5%E6%98%8E%E6%96%87%E6%94%BB%E5%87%BB/</url>
-    <content><![CDATA[题目信息
+    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
+    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
+    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
+这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
+1. 攻击链
+2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
+
+误报高：调试器、合法软件更新机制都会调用
+绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
+漏报高：攻击者可用 Process Hollowing（无需远程线程）
+
+改进设计: 从”单点拦截”转向”行为链评分”
+3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
+3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
 
 
-项目
-内容
+
+攻击类型
+标签序列
+加分
+阈值
 
 
 
-赛事
-MoeCTF 2021
+远程线程注入
+CrossAlloc → CrossWrite → CrossThreadCreate
++30
+80
 
 
-题目
-PEPEPE
+Process Hollowing
+Unmap → Alloc → Write → Protect_Exec
++35
+80
 
 
-分值
-443 分
+保护属性拆分
+CrossAlloc → CrossWrite → CrossProtect_Exec
++25
+80
 
 
-类型
-Reverse &#x2F; PE 文件还原
-
-
-考点
-已知明文攻击、XOR 流密码、PE 文件结构
-
-
-平台
-NSSCTF (https://www.nssctf.cn/problem/3391)
-
-
-题目描述
-题目提供了一个经过加密的 PE 文件和加密程序源码，需要分析加密算法，并恢复原始可执行文件。
-
-加密后的文件头部已无 MZ 标志，用 file 命令识别为纯 data。
-加密原理分析查看加密器 main.c 的核心逻辑：
-scanf(&quot;%s&quot;, input);                      // 输入 key...for (int i = 0; i &lt; file_len - 1; i++) &#123;    bank[i] = getc(f);    bank[i] = ~(bank[i] ^ input[i % input_len]);   // 逐字节 XOR 后取反&#125;
-
-加密公式：
-enc[i] = ~(org[i] ^ key[i % key_len])
-
-其中 key 是加密时输入的字符串，按 i % key_len 循环使用。这是一个循环 XOR 流密码（多了一步取反），强度完全取决于 key 的保密性。
-解题思路：已知明文攻击为什么能攻击？PE 文件有固定不变的结构——文件头。任何 PE 文件都以 MZ（0x4D 0x5A）开头，后面跟着结构固定的 DOS Header（大量字节是固定的 0x00）。这就是”已知明文”。
-
-前 64 字节的 DOS Header 中，大量字节是固定值或零值，非常适合作为已知明文。
-Key 恢复把加密公式变形：
-key[i] = ~enc[i] ^ org[i]
-
-用加密文件的前若干字节 + 已知的 PE 头部明文，恢复 key 的循环片段，检测周期得完整 key（其中 plain_head 取自原始文件 file_org 的前 64 字节，即标准 DOS Header）：
-def recover_key(data: bytes, plain_head: bytes) -&gt; bytes:    ks = bytes([(~data[i]) &amp; 0xFF ^ plain_head[i] for i in range(len(plain_head))])    for period in range(1, len(ks) // 2 + 1):        if all(ks[i] == ks[i % period] for i in range(len(ks))):            return ks[:period]    return ks
-
-运行结果：
-[+] recovered key = b&#x27;reverierwilllikeyou!&#x27; (len=20)
-
-key &#x3D; reverierwilllikeyou!（20 字节），呼应了 file_org.c 中的 “I think ReverierXu will like you!”。
-完整还原def decrypt(data: bytes, key: bytes) -&gt; bytes:    return bytes([(~b) &amp; 0xFF ^ key[i % len(key)] for i, b in enumerate(data)])
-
-验证结果：
-
-file_restored 被识别为 PE32 executable
-与原始文件对比，前 45559&#x2F;45560 字节完全一致
-
-
-最后一个字节差异：加密循环只处理 file_len - 1 个字节，末字节为未初始化内存（垃圾值），不影响 PE 完整性。
-
-运行验证$ cp file_restored file_restored.exe &amp;&amp; echo &quot;&quot; | ./file_restored.exe[root@Track.Sh]# Good job, I think ReverierXu will like you![root@Track.Sh]# moectf&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
-
-Flag
-注意：还原后的程序输出的是 moectf{} 格式，而 NSSCTF 平台要求使用 NSSCTF{} 格式提交（题目描述中已注明）。
-
-NSSCTF&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
-
-总结
-识别加密算法为循环 XOR（+取反）流密码
-利用 PE 文件头固定结构 进行已知明文攻击恢复 key
-检测 key 循环周期得到完整 key
-解密整个文件，还原出可运行的 PE，运行得到 flag
-固定格式的数据结构会降低简单流密码的安全性，因此在设计加密方案时不能仅依赖 XOR 与固定密钥。
-
-参考
-PE Format - Microsoft Learn
-NSSCTF - PEPEPE
-
+4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
 ]]></content>
       <categories>
-        <category>CTF</category>
-        <category>Reverse Engineering</category>
+        <category>Malware Analysis</category>
       </categories>
       <tags>
         <tag>网络安全协会暑期培训</tag>
         <tag>Windows</tag>
-        <tag>CTF</tag>
-        <tag>Reverse</tag>
-        <tag>PE</tag>
-        <tag>密码学</tag>
+        <tag>恶意样本</tag>
+        <tag>Reserve</tag>
+        <tag>HIPS</tag>
       </tags>
   </entry>
   <entry>
@@ -890,113 +789,316 @@ SnowSword 项目地址：https://github.com/user-lzy/SnowSword
       </tags>
   </entry>
   <entry>
-    <title>SnowWall 检测实测：从实验环境到结果复核</title>
-    <url>/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
-    <content><![CDATA[1. 引言前面的文章主要记录 SnowSword 在进程、驱动和内存视角上的检测实践。这次把测试重点放到 SnowWall 对恶意行为链的检测：使用 SnowSword 在授权的隔离实验机中对 Windows 计算器进程执行 DLL 远程注入，然后观察 SnowWall 如何记录、关联并阻断这一串操作。
-本文只讨论防御性检测和实验现象。远程线程注入也可能出现在调试、兼容性工具和安全软件中，因此“命中行为链”是需要进一步复核的高风险信号，而不是脱离上下文的恶意归因。
-2. 实验环境与对照条件实验对象是 Windows 11 中的 CalculatorApp.exe，日志记录的目标 PID 为 4236。发起方是桌面目录下未签名的 SnowSword.exe，PID 为 7108，父进程为 explorer.exe。
-实验采用两组对照：
+    <title>[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥</title>
+    <url>/2026/08/01/%E6%97%A5%E6%8A%A5_PEPEPE_%E5%B7%B2%E7%9F%A5%E6%98%8E%E6%96%87%E6%94%BB%E5%87%BB/</url>
+    <content><![CDATA[题目信息
+
+
+项目
+内容
 
 
 
-条件
-观察结果
+赛事
+MoeCTF 2021
 
 
-
-SnowWall 开启
-注入流程出现失败提示，日志记录跨进程内存操作和远程线程创建，并在行为阈值处阻断
-
-
-SnowWall 关闭
-注入流程出现成功提示，作为未启用防护时的对照现象
+题目
+PEPEPE
 
 
-两组截图的窗口布局基本一致，区别主要在 SnowWall 是否仍处于监控状态以及注入结果提示。这里的“成功&#x2F;失败”只表示本次测试程序报告的结果，最终判断仍以日志和目标进程状态为准。
-3. 注入代码的行为拆解RemoteInjectDll 的核心流程可以抽象为：
-OpenProcess(PROCESS_ALL_ACCESS)        ↓VirtualAllocEx  分配目标进程内存        ↓WriteProcessMemory  写入 DLL 路径        ↓ZwCreateThreadEx  在目标进程创建线程                  └─ 线程入口 = LoadLibraryW
+分值
+443 分
 
-代码首先通过 OpenProcess(PROCESS_ALL_ACCESS, ...) 获取目标进程句柄。随后按 DLL 路径长度调用 VirtualAllocEx，再用 WriteProcessMemory 把路径写入目标地址空间，并通过 ReadProcessMemory 做一次写入验证。
-在 64 位分支中，由于 64 位 Windows 的 kernel32.dll 在系统范围内按相同基址加载，远程线程入口可以直接使用本进程解析到的 LoadLibraryW 地址，参数是目标进程中的路径地址。在 32 位分支中，代码额外获取目标进程中的函数地址，构造一段调用 LoadLibraryW 的 x86 shellcode，分配可执行内存后再通过 ZwCreateThreadEx 执行。两条分支的实现细节不同，但从防御侧看都形成了相同的高风险序列：跨进程分配、跨进程写入、跨进程线程创建。
-这也是行为检测比只匹配某个 API 更有价值的地方：单独调用 VirtualAllocEx 可能有正常用途，但它与后续写入和远程线程创建在短时间内连续出现时，语义明显发生变化。
-4. SnowWall 日志中的行为链日志时间集中在 06:52:20 至 06:52:21，关键记录如下：
-4.1 第一步：跨进程分配导致污点升级首先，NtAllocateVirtualMemory 被记录为规则评估事件，随后 SnowWall 输出 CrossAlloc 告警，原因是“污点等级升级为 1”，可疑度分数为 15，并标记为永久污染。
-这一步并没有立即给出最终阻断结论，但它为后续行为建立了上下文状态。也就是说，SnowWall 并非把每一次系统调用都孤立处理，而是为进程累积行为标签。
-4.2 第二步：向 CalculatorApp.exe 写入内存紧接着的 NtWriteVirtualMemory 事件显示：
 
-发起 PID：7108；
-目标 PID：4236；
-目标映像：CalculatorApp.exe；
-CrossProcess=1；
-发起程序未签名，且没有可信祖先进程标记。
+类型
+Reverse &#x2F; PE 文件还原
 
-该条记录中的 rule_action=1 和 reason=RULE_ALLOW 表示这一条规则评估本身没有阻断，不能理解成整个注入流程已经被 SnowWall 放行。它只是行为链中的中间事件。
-4.3 第三步：远程线程创建触发阈值随后到达 NtCreateThreadEx——用户态调用 ZwCreateThreadEx 最终进入的正是这个内核系统服务，因此日志记录的是 NtCreateThreadEx。日志明确标出 CrossThreadCreate，匹配规则“远程线程注入链”，可疑度分数升至 82.91，并出现 behavior_hit=1、reason=BEHAVIOR_THRESHOLD。
-之后 SnowWall 输出：
-行为累积判定恶意: PID=7108 LastTag=CrossThreadCreateevent=DECISION ... action=BLOCK reason=BEHAVIOR_THRESHOLD
 
-因此，本次实验的完整判定是：前面的单条规则评估允许记录继续进入决策流程；当跨进程分配、写入和远程线程创建形成可疑序列后，行为累计分数达到阈值，SnowWall 最终执行 BLOCK。
-5. 截图与日志的相互印证5.1 SnowWall 开启：注入被阻断
-截图中可以看到 SnowSword 的目标进程列表、Windows 计算器窗口和 SnowWall 窗口，同时弹出“注入失败”的提示。它与日志最后的 action=BLOCK 相互印证：测试程序观察到失败，SnowWall 侧则给出了行为阈值阻断记录。
-5.2 SnowWall 关闭：作为对照的成功提示
-关闭 SnowWall 后，界面弹出“注入成功”的提示。
-6. 结果分析：为什么是“行为链”而不是单点告警本次日志可以整理成一条简化链路：
-未签名 SnowSword.exe        │        ├─ NtAllocateVirtualMemory ── CrossAlloc，污点等级 1，分数 15        │        ├─ NtWriteVirtualMemory ───── CrossProcess=1，写入 PID 4236        │        └─ NtCreateThreadEx ───────── CrossThreadCreate，分数 82.91                                      ↓                              BEHAVIOR_THRESHOLD                                      ↓                                     BLOCK
+考点
+已知明文攻击、XOR 流密码、PE 文件结构
 
-其中有三个值得注意的设计点：
 
-状态累积：第一次分配操作先建立污点，后续事件可以继承上下文；
-目标关联：日志不仅记录 API，还记录目标 PID、目标映像和跨进程标志；
-分级决策：中间事件可以先记录或允许，最终由行为阈值统一决定是否阻断。
+平台
+NSSCTF (https://www.nssctf.cn/problem/3391)
 
-这种策略比“看到 OpenProcess 就直接拦截”更适合降低误报，也比只等待 DLL 加载完成再处理更及时。
-7. 工程观察与防御建议从测试代码和日志可以得到几项工程上的观察：
 
-PROCESS_ALL_ACCESS 权限过宽，防御产品可将句柄权限、调用者身份和目标进程保护级别纳入风险评分；
-VirtualAllocEx 与 WriteProcessMemory 的组合比单独的内存分配更值得关注；
-NtCreateThreadEx 是行为链中的关键收敛点，但检测不应只依赖函数名，还要核对入口地址、目标进程和前序事件；
-32 位分支需要额外的可执行内存和 shellcode，64 位分支则直接将 LoadLibraryW 作为线程入口，跨架构差异可以作为日志字段而不是简单的放行条件；
-测试程序在清理路径中关闭句柄，但还应确保远程内存和 shellcode 在所有失败分支都得到释放，避免实验代码自身引入泄漏或不稳定因素。
+题目描述
+题目提供了一个经过加密的 PE 文件和加密程序源码，需要分析加密算法，并恢复原始可执行文件。
 
-对防御侧而言，较稳妥的策略是保留原始事件、建立短时间窗口内的行为关联，并把签名、路径、父子进程关系和目标映像作为辅助证据。最终动作可以按风险等级分为记录、告警、挂起或阻断，同时为调试工具和受信任软件保留明确的审计例外。
-8. 当前局限与证据边界本次实验仍有以下限制：
+加密后的文件头部已无 MZ 标志，用 file 命令识别为纯 data。
+加密原理分析查看加密器 main.c 的核心逻辑：
+scanf(&quot;%s&quot;, input);                      // 输入 key...for (int i = 0; i &lt; file_len - 1; i++) &#123;    bank[i] = getc(f);    bank[i] = ~(bank[i] ^ input[i % input_len]);   // 逐字节 XOR 后取反&#125;
 
-只有一组目标进程和一次主要日志片段，尚未进行多次重复统计；
-未覆盖签名的合法调试器、不同完整性级别和受保护进程；
-未分别验证 32 位目标进程分支与 64 位目标进程分支的全部路径；
-截图中的“注入成功”来自测试程序提示，尚未用独立工具确认 DLL 模块、入口执行和线程退出状态；
-当前日志没有展示完整规则配置、阈值定义和所有前置事件，因此不能据此推断 SnowWall 在其他版本或其他策略下必然给出相同结果。
+加密公式：
+enc[i] = ~(org[i] ^ key[i % key_len])
 
-换句话说，日志能够证明本次运行中 SnowWall 观察到了这些 API 事件，并在该策略下输出 BLOCK；截图能够证明两种开关状态下界面现象不同。至于检测覆盖率、误报率和跨版本稳定性，还需要更系统的实验设计。
-9. 后续实验计划后续准备建立一个小型复现实验矩阵，至少保留以下字段：
+其中 key 是加密时输入的字符串，按 i % key_len 循环使用。这是一个循环 XOR 流密码（多了一步取反），强度完全取决于 key 的保密性。
+解题思路：已知明文攻击为什么能攻击？PE 文件有固定不变的结构——文件头。任何 PE 文件都以 MZ（0x4D 0x5A）开头，后面跟着结构固定的 DOS Header（大量字节是固定的 0x00）。这就是”已知明文”。
 
-SnowWall 版本、规则版本和 Windows 版本；
-发起进程签名、路径、完整性级别与父进程；
-目标进程架构、保护属性和 PID；
-每个 API 事件的时间戳、目标和规则动作；
-最终动作、测试程序返回值和独立验证结果；
-正常调试场景与注入测试场景的重复次数。
+前 64 字节的 DOS Header 中，大量字节是固定值或零值，非常适合作为已知明文。
+Key 恢复把加密公式变形：
+key[i] = ~enc[i] ^ org[i]
 
-在此基础上，再比较只调用单个 API、缺少前序事件以及完整行为链时的分数变化，才能更准确地评估 SnowWall 的阈值设计和误报边界。
-总结这次实验展示了 SnowWall 如何从 NtAllocateVirtualMemory、NtWriteVirtualMemory 到 NtCreateThreadEx 逐步积累上下文，并将跨进程内存操作与远程线程创建关联为“远程线程注入链”。日志中的 CrossAlloc、CrossThreadCreate、BEHAVIOR_THRESHOLD 和最终 BLOCK，与 SnowWall 开启时的失败提示形成了较完整的证据链；关闭 SnowWall 后的成功提示则提供了直观对照。
-这个结果说明，针对高风险进程行为，按序列关联和分级决策比单点 API 拦截更有解释力。但它仍然是一次受控环境下的功能验证，不能替代多版本、多样本和正常软件基线测试。
+用加密文件的前若干字节 + 已知的 PE 头部明文，恢复 key 的循环片段，检测周期得完整 key（其中 plain_head 取自原始文件 file_org 的前 64 字节，即标准 DOS Header）：
+def recover_key(data: bytes, plain_head: bytes) -&gt; bytes:    ks = bytes([(~data[i]) &amp; 0xFF ^ plain_head[i] for i in range(len(plain_head))])    for period in range(1, len(ks) // 2 + 1):        if all(ks[i] == ks[i % period] for i in range(len(ks))):            return ks[:period]    return ks
+
+运行结果：
+[+] recovered key = b&#x27;reverierwilllikeyou!&#x27; (len=20)
+
+key &#x3D; reverierwilllikeyou!（20 字节），呼应了 file_org.c 中的 “I think ReverierXu will like you!”。
+完整还原def decrypt(data: bytes, key: bytes) -&gt; bytes:    return bytes([(~b) &amp; 0xFF ^ key[i % len(key)] for i, b in enumerate(data)])
+
+验证结果：
+
+file_restored 被识别为 PE32 executable
+与原始文件对比，前 45559&#x2F;45560 字节完全一致
+
+
+最后一个字节差异：加密循环只处理 file_len - 1 个字节，末字节为未初始化内存（垃圾值），不影响 PE 完整性。
+
+运行验证$ cp file_restored file_restored.exe &amp;&amp; echo &quot;&quot; | ./file_restored.exe[root@Track.Sh]# Good job, I think ReverierXu will like you![root@Track.Sh]# moectf&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
+
+Flag
+注意：还原后的程序输出的是 moectf{} 格式，而 NSSCTF 平台要求使用 NSSCTF{} 格式提交（题目描述中已注明）。
+
+NSSCTF&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
+
+总结
+识别加密算法为循环 XOR（+取反）流密码
+利用 PE 文件头固定结构 进行已知明文攻击恢复 key
+检测 key 循环周期得到完整 key
+解密整个文件，还原出可运行的 PE，运行得到 flag
+固定格式的数据结构会降低简单流密码的安全性，因此在设计加密方案时不能仅依赖 XOR 与固定密钥。
+
 参考
-Microsoft Learn：OpenProcess、VirtualAllocEx、WriteProcessMemory、NtCreateThreadEx
-Windows Internals, 7th Edition
-本系列前篇：日报_SnowSword隐藏驱动检测实测、SnowSword-隐藏驱动检测原理与工程实现
-SnowSword 项目地址：https://github.com/user-lzy/SnowSword
+PE Format - Microsoft Learn
+NSSCTF - PEPEPE
 
 ]]></content>
       <categories>
-        <category>SnowSword Development</category>
+        <category>CTF</category>
+        <category>Reverse Engineering</category>
       </categories>
       <tags>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>Windows</tag>
+        <tag>CTF</tag>
+        <tag>Reverse</tag>
+        <tag>PE</tag>
+        <tag>密码学</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>内存暴力搜索隐藏驱动 —— PE 特征扫描 + 模块列表差集</title>
+    <url>/2026/08/16/%E6%97%A5%E6%8A%A5_%E5%86%85%E5%AD%98%E6%9A%B4%E5%8A%9B%E6%90%9C%E7%B4%A2DRIVER_OBJECT_%E6%94%B9%E8%BF%9B%E7%89%88/</url>
+    <content><![CDATA[1. 伏笔：上一篇留下的那个盲区上一篇（隐藏驱动检测）我讲了两个视角的交叉验证：模块列表（PsLoadedModuleList）和对象目录（\Driver、\FileSystem）。写完我顺手模拟了一下攻击者视角，发现一个问题：
+
+如果攻击者 摘链 PsLoadedModuleList + 不注册 \Driver 对象，两个视角会同时落空——驱动”理论上不存在”，但它明明在内核里跑着。
+
+这就是所谓的纯内存驱动（memory-only driver）：不落地、不注册对象，代码直接拷进内核内存执行。传统的驱动检测手段对它全部失效。
+我当时在上一篇结尾留了个伏笔：DRIVER_OBJECT 是真实存在于内核内存里的结构，能不能直接扫内存把它捞出来？这篇就来填这个坑。
+2. 攻击者模型：驱动到底怎么”藏”先明确一下我们要对抗的威胁模型。一个驱动想隐藏，需要同时做两件事：
+
+
+
+视角
+隐藏手段
+
+
+
+模块列表（PsLoadedModuleList）
+摘链：从双向链表里摘掉自己的 LDR_DATA_TABLE_ENTRY
+
+
+对象目录（\Driver 等）
+不注册 DRIVER_OBJECT 到对象管理器命名空间
+
+
+注意一个关键点：这两个手段都是在”登记处”动手脚，而不是销毁对象本身。驱动要跑，DRIVER_OBJECT 这个结构体就必须活在内存里——它是 I&#x2F;O 子系统操作驱动的唯一凭据（派发例程、卸载例程都挂在上面）。
+所以问题变成了：怎么找到这块”没登记但真实存在”的可执行内存？
+
+如果我是攻击者，怎么让检测失效？
+
+双杀：摘链 PsLoadedModuleList + 同时从 \Driver 目录删除对象（需调用 ObMakeTemporaryObject 等，但也会留下新的痕迹）；
+不注册 DRIVER_OBJECT：纯内存执行，两个视角都看不到 → 引出本篇方案；
+伪造 DriverSection-&gt;DllBase：指向一个合法模块的基址，交叉比对时被”吸附”到合法基址，产生假阴性；
+彻底 shellcode 化：无 PE 头、无驱动对象，纯手工 hook 内核代码——这是 inline hook 检测的战场（见本系列后续篇）。
+
+检测的本质不是”找到所有坏人”，而是提高攻击者的隐藏成本。
+
+3. 方案对比：DRIVER_OBJECT 特征 vs PE 头特征理论上可以直接扫描 DRIVER_OBJECT 结构体特征，但我最终选择了 PE 头特征。以下是两条路线的对比和取舍过程。
+3.1 DRIVER_OBJECT 特征（精确但脆）DRIVER_OBJECT 是驱动在内核里的身份证。它在 x64 上是 0x150 字节，关键字段如下（以 Win10 1809 x64 实测布局为准，我用 IDA 反编译 afd.sys 的 DriverEntry 验证过字段用法）：
+typedef struct _DRIVER_OBJECT &#123;    CSHORT Type;                    // +0x00  ← 类型魔数 IO_TYPE_DRIVER (0x0B)    CSHORT Size;                    // +0x02  ← 结构大小 0x150    PDEVICE_OBJECT DeviceObject;    // +0x08    ULONG Flags;                    // +0x10    PVOID DriverStart;              // +0x18  ← 驱动代码基址    ULONG DriverSize;               // +0x20    PVOID DriverSection;            // +0x28  ← LDR_DATA_TABLE_ENTRY*（模块链表节点）    PDRIVER_EXTENSION DriverExtension;  // +0x30 ← 扩展结构，内含回指    UNICODE_STRING DriverName;      // +0x38  ← 驱动名字符串    PUNICODE_STRING HardwareDatabase; // +0x48    PFAST_IO_DISPATCH FastIoDispatch; // +0x50    PVOID DriverInit;               // +0x58    PVOID DriverStartIo;            // +0x60    PVOID DriverUnload;             // +0x68    PVOID MajorFunction[IRP_MJ_MAXIMUM_FUNCTION + 1]; // +0x70，共 28 个&#125; DRIVER_OBJECT;
+
+
+💡 类比理解：MajorFunction 就是一张 28 格子的”接线表”，每个格子对应一类 IRP，填的是处理函数地址。驱动要处理什么请求，就往对应格子塞函数指针。这张表就是驱动功能的索引——攻击者想改驱动行为，或者我们想识别驱动，都得看它。
+
+三个最值钱的”指纹”（组合起来几乎不可能被自然数据巧合满足）：
+
+Type == IO_TYPE_DRIVER (0x0B)：I&#x2F;O 子系统初始化驱动对象时写入的魔数；
+DriverExtension-&gt;DriverObject == 自身：_DRIVER_EXTENSION 第一个字段回指驱动对象指针。这是最强的判据——相互引用、自我指涉的数据结构，随机数据几乎不可能形成这种闭环；
+MajorFunction[0..27] 全部指向内核代码区：28 个指针都必须落在内核可执行地址范围内。
+
+但这条路我最终没选，原因很现实：
+
+布局跨版本敏感：字段偏移、IO_TYPE_DRIVER 魔数在不同 Windows 版本可能不同；
+扫描范围难定：对象在非分页池，而 Win10 1809+ 非分页池定位本身就很麻烦；
+实现成本高：需精确结构布局 + 池定位，维护负担重。
+
+
+结论：DRIVER_OBJECT 四关卡校验留着当升级方案，先不实现。
+
+3.2 PE 头特征（粗糙但稳）驱动是一个 PE 镜像，必然以 MZ 头（IMAGE_DOS_SIGNATURE）+ PE 签名（IMAGE_NT_SIGNATURE）开头。这个特征：
+
+跨版本稳定（PE 格式几十年没变过）；
+只需读内存开头几十字节（实现成本低）；
+配合模块列表差集就能区分正常驱动和隐藏驱动。
+
+
+设计取舍：与其”扫结构体特征”（精确但脆），不如”扫 PE 镜像特征 + 和模块列表做差集”（粗糙但稳）——凡是带合法 PE 头、又不在模块列表里的可执行页 &#x3D; 疑似隐藏驱动。
+
+
+
+
+维度
+PE 头特征（本篇实现）
+DRIVER_OBJECT 特征（升级方案）
+
+
+
+特征位置
+镜像开头（MZ&#x2F;PE 签名）
+结构体内部（Type&#x2F;回指&#x2F;MajorFunction）
+
+
+跨版本稳定性
+高（PE 格式恒定）
+低（结构布局随版本变）
+
+
+能抓到
+PE 形态的隐藏驱动
+有完整驱动对象结构的隐藏驱动
+
+
+实现成本
+低（读几十字节）
+高（需精确布局+池定位）
+
+
+4. 扫描范围与性能考量这一步我纠结了最久，也是我觉得这篇最有价值的部分——怎么在合理时间内扫完内核内存，以下都是我的试错过程。
+4.1 无脑方案：全地址空间逐字节扫x64 内核地址空间约 128 TB。按 16 字节步进 &#x3D; 8 万亿次检查，而且大部分地址是无效映射，直接读会触发页面错误蓝屏。这个方案在第一分钟就该被毙掉。
+4.2 改进：按页遍历 + 先验页有效性128 TB &#x2F; 4 KB &#x3D; 340 亿页，每页一次 MmIsAddressValid，哪怕单次 100ns 也要近 1 小时。作为 ARK 的”开机扫描”仍然不可接受。
+4.3 最终选择：先扫”内核驱动加载区”（有已知盲区）穷举地址空间不现实，但纯内存驱动的代码总不能凭空出现——它要么拷进驱动加载区（ntoskrnl 附近的系统模块区域），要么落在非分页池。
+我选择先扫 [ntoskrnl基址 - 0x70000000, ntoskrnl基址] 的驱动加载区：
+&#x27; 扫描范围 = [ntoskrnl基址 - 1.75GB, ntoskrnl基址]ulonglong endAddr = GetKernelModuleBase(&quot;ntoskrnl.exe&quot;, &amp;ModuleSize);uonglong startAddr = EndAddr - 0x70000000;
+
+共约 44.8 万页，比 128 TB 全空间小了四个数量级，从”扫不完”变成”可接受”。
+已知盲区：
+
+攻击者若将驱动代码拷到非分页池高地址段，本版扫不到——这是当前实现最现实的绕过路径；
+v2 计划补全非分页池定位（见第 8 节）。
+
+4.4 多线程分片44.8 万页不能单线程傻扫。解决方式是多线程分片：把 [StartAddr, EndAddr] 按线程数均分，每个线程扫一段，互斥锁保护共享结果数组。
+关键：区间边界必须按 PAGE_SIZE 对齐，否则 StartAddr + i * addrRange 落在页中间，漏掉页首的 MZ 头（PE 头在镜像基址&#x3D;页首）。我一开始没对齐，扫出来的结果少了一大截，debug 半天才发现。
+4.5 性能优化（架构设计阶段即考虑）第一版实现是每页一次 IOCTL——44.8 万页就是 44.8 万次用户态↔内核态往返。作为验证思路的第一版能接受，但正式功能必须优化：
+
+批量化：把一批页地址塞进一个缓冲区，一次 IOCTL 让驱动循环检查，回传结果数组——IOCTL 次数从 44.8 万降到几十；
+驱动内差集：干脆驱动直接拿 SystemModuleInformation 缓存模块基址集合，在驱动内完成差集，用户态只收最终结果。
+
+
+本版先跑通每页 IOCTL 的验证逻辑，优化在 v2 实现。
+
+5. 特征校验：PE 头 + 模块列表差集范围扫到了，接下来是”怎么算命中”。命中判定拆成两半：驱动端认 PE 头，用户态认模块归属。
+5.1 驱动端：MZ → PE 签名两步走内核里逐页检查，读页首数据验证 PE 头。安全读是核心——内核地址不是都能直接解引用的，读无效页会直接蓝屏，所以必须先预检再拷贝：
+// ⚠️ 以下为核心逻辑示意，非完整可编译代码// 实际实现需自行补全安全拷贝、异常处理、入参校验// 1. 页对齐粗检 + ProbeForRead 快速预检（比直接拷贝快一个量级）// 2. 安全拷贝 DOS 头（MZ 魔数）——必须用 MmCopyMemory/VxkCopyMemory，不能直接解引用if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)   // &#x27;MZ&#x27;    return Normal;// 3. MZ 命中，再安全拷贝 PE 头（e_lfanew 指向 PE 签名）if (ntHeader.Signature == IMAGE_NT_SIGNATURE) &#123;  // &#x27;PE\0\0&#x27;    // 4. 疑似 PE 镜像 → 标记为候选隐藏驱动，交用户态做模块归属差集    return HideDriver;&#125;
+
+
+💡 类比理解：这就像保安查门禁——每个进楼的人都要带工牌（PE 头），保安只拦”没登记的人”（模块列表里没有的 PE）。工牌本身人人都有，关键在登记簿上有没有你的名字。
+
+5.2 用户态：和模块列表做差集驱动端只负责”这页长得像 PE 镜像”，它不区分正常驱动和隐藏驱动（正常驱动也是 PE）。区分工作交给用户态：命中页地址用 GetDriverPathByAddr 反查它属于哪个已加载模块——
+
+能查到路径 → 是已知模块的镜像，正常；
+查不到 → 游离 PE 镜像 &#x3D; 疑似隐藏驱动，记录地址，之后和模块列表交叉复核。
+
+6. 实现：驱动端扫 + 用户态多线程调度6.1 总体架构用户态（FreeBasic）                    驱动端（SnowSword.sys）┌─────────────────────┐   IOCTL    ┌─────────────────────────┐│ 多线程分片扫描        │ ─────────▶ │ OptimizedScanKernelMemory││ 每页发一次 IOCTL 询问  │ ◀───────── │ 逐页 PE 特征检查          ││ 互斥锁保护结果数组     │           └─────────────────────────┘│ GetDriverPathByAddr  ││ 差集 → 展示          │└─────────────────────┘
+
+6.2 用户态线程工作函数（核心逻辑）&#x27; ⚠️ 以下为核心逻辑示意，非完整可编译代码&#x27; 实际实现需自行补全错误处理、内存管理、类型安全for (ulonglong addr = p-&gt;startAddr ; ddr &lt;= p-&gt;endAddr ; addr += PAGE_SIZE) &#123;    stMemory.addr   = (PVOID)addr;    stMemory.dwSize = PAGE_SIZE;    &#x27; 每页发一次 IOCTL，让驱动检查这页是不是 PE 镜像    if (IoControl(hDrv, IOCTL_ScanKernelMemory, @stMemory, SizeOf(MemoryStruct),                 @result, SizeOf(MEMORY_SCAN_RESULT)) &lt;&gt; 0) &#123;        if (result &lt;&gt; Normal) &#123;            &#x27; 命中：互斥锁保护下记录结果            MutexLock(p-&gt;hMutex);            &#x27; 记录 Addr 到共享数组            MutexUnlock(p-&gt;hMutex);        &#125;    &#125;&#125;
+
+命中后用户态再调 GetDriverPathByAddr(Addr) 判断模块归属：有路径 → 正常模块；无路径 → 疑似隐藏驱动。
+7. 实验计划（待执行）
+⚠️ 本文是设计稿，实验结果将在后续补充。
+
+
+
+
+步骤
+内容
+状态
+
+
+
+Step 1
+干净系统自检：扫描驱动区，所有 PE 命中都应能归属到已知模块
+⏳ 待执行
+
+
+Step 2
+对抗测试：构造纯内存驱动样本（摘链 + 不注册对象），验证能否检出
+⏳ 待执行
+
+
+Step 1：特征自检（先证明扫描没瞎）在干净的 Win10 1809 虚拟机里，加载 SnowSword 驱动跑扫描：
+
+扫描 [ntoskrnl基址 - 0x70000000, ntoskrnl基址] 驱动区，收集所有 PE 特征命中页；
+对每个命中地址调 GetDriverPathByAddr 反查模块归属，与 SystemModuleInformation 模块列表交叉；
+预期：正常系统里，所有命中都应能归属到已知模块（ntoskrnl、hal、afd 等）；归属不到模块的命中数为 0——这是自检通过的第一道标准；
+用 windbg lm &#x2F; !drvobj 抽查几个命中地址，确认 PE 头校验没有把数据区误认成镜像。
+
+
+自检通过的标准：命中全部可解释——每个 PE 命中都能对应一个已知模块，没有莫名其妙的多余项，也没有把正常驱动漏掉。
+
+Step 2：对抗测试（证明能揪出隐藏驱动）构造一个”纯内存驱动”样本：
+
+写一个普通驱动，DriverEntry 里自摘链：把自己的 DriverSection-&gt;InLoadOrderLinks 从 PsLoadedModuleList 摘掉；
+不调用 IoCreateDevice（不产生设备对象），也不依赖 \Driver 目录注册的常规路径——模拟”双视角皆盲”；
+再跑一遍扫描，预期：模块列表和对象目录都看不到它，但 PE 扫描按镜像特征把它捞出来——GetDriverPathByAddr 查不到归属 &#x3D; 命中列表里出现一个”游离 PE”；
+
+8. 已知局限与后续计划8.1 当前局限
+扫描范围盲区：只扫驱动加载区，非分页池高地址段未覆盖——攻击者把代码拷到非分页池即可绕过；
+IOCTL 频率：每页一次 IOCTL，44.8 万次上下文切换，全扫分钟级；
+PE 头可抹除：攻击者加载后擦掉 MZ&#x2F;PE 魔数即可让本方案失效（但会破坏 I&#x2F;O 子系统的加载假设，纯 shellcode 才能这么干）。
+
+8.2 后续计划
+v2：补全非分页池定位（Win10 1809+ 无 MmNonPagedPoolStart/End 导出，需特征扫 _POOL_DESCRIPTOR 或借 windbg&#x2F;PDB）；
+升级方案：DRIVER_OBJECT 四关卡校验（Type + 回指 + MajorFunction），覆盖”抹掉 PE 头但保留驱动对象”的场景。
+
+9. 遇到的问题与注意事项
+页对齐：扫描区间边界必须按 PAGE_SIZE 对齐，否则漏掉页首的 MZ 头（4.4 节有详细说明）；
+地址类型宽度：内核地址是 64 位的，用户态保存扫描范围&#x2F;结果时必须用 ULongInt，不能用 ULong。截断后起始地址直接错位，扫出来全是噪音；
+安全读内核内存：不能直接解引用，必须先 ProbeForRead 预检 + MmCopyMemory 安全拷贝 + __try/__except 兜底——缺一步都可能蓝屏；
+IOCTL 频率：每页一次 IOCTL 有几十万次上下文切换，全扫分钟级；正式功能必须批量化（见 4.5）；
+调试输出：DbgPrint 别放在逐页循环里，命中才会打还好，每页都打能把调试器刷到卡死；
+误报：PE 头校验命中的”游离镜像”只是疑似，需和模块列表差集 + 人工复核，不自动判定恶意。
+
+参考
+Windows Internals, 7th Edition（加载器 &#x2F; 驱动对象 &#x2F; 内存管理章节）
+Microsoft Learn： IMAGE_NT_HEADERS
+本系列前篇：日报_隐藏驱动检测_改进版（本篇的伏笔出处）、SnowSword–进程隐藏检测实现
+实验佐证：IDA 反编译 win10 1809 afd.sys DriverEntry（DRIVER_OBJECT 字段用法，为升级方案做的预研）
+
+]]></content>
+      <categories>
+        <category>Windows Kernel</category>
+      </categories>
+      <tags>
+        <tag>Anti-Rootkit</tag>
         <tag>Windows Kernel</tag>
         <tag>SnowSword</tag>
         <tag>网络安全协会暑期培训</tag>
-        <tag>进程行为检测</tag>
-        <tag>安全检测</tag>
-        <tag>SnowWall</tag>
+        <tag>驱动检测</tag>
+        <tag>内存特征扫描</tag>
       </tags>
   </entry>
   <entry>
@@ -1266,218 +1368,6 @@ LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（https:
       </tags>
   </entry>
   <entry>
-    <title>内存暴力搜索隐藏驱动 —— PE 特征扫描 + 模块列表差集</title>
-    <url>/2026/08/16/%E6%97%A5%E6%8A%A5_%E5%86%85%E5%AD%98%E6%9A%B4%E5%8A%9B%E6%90%9C%E7%B4%A2DRIVER_OBJECT_%E6%94%B9%E8%BF%9B%E7%89%88/</url>
-    <content><![CDATA[1. 伏笔：上一篇留下的那个盲区上一篇（隐藏驱动检测）我讲了两个视角的交叉验证：模块列表（PsLoadedModuleList）和对象目录（\Driver、\FileSystem）。写完我顺手模拟了一下攻击者视角，发现一个问题：
-
-如果攻击者 摘链 PsLoadedModuleList + 不注册 \Driver 对象，两个视角会同时落空——驱动”理论上不存在”，但它明明在内核里跑着。
-
-这就是所谓的纯内存驱动（memory-only driver）：不落地、不注册对象，代码直接拷进内核内存执行。传统的驱动检测手段对它全部失效。
-我当时在上一篇结尾留了个伏笔：DRIVER_OBJECT 是真实存在于内核内存里的结构，能不能直接扫内存把它捞出来？这篇就来填这个坑。
-2. 攻击者模型：驱动到底怎么”藏”先明确一下我们要对抗的威胁模型。一个驱动想隐藏，需要同时做两件事：
-
-
-
-视角
-隐藏手段
-
-
-
-模块列表（PsLoadedModuleList）
-摘链：从双向链表里摘掉自己的 LDR_DATA_TABLE_ENTRY
-
-
-对象目录（\Driver 等）
-不注册 DRIVER_OBJECT 到对象管理器命名空间
-
-
-注意一个关键点：这两个手段都是在”登记处”动手脚，而不是销毁对象本身。驱动要跑，DRIVER_OBJECT 这个结构体就必须活在内存里——它是 I&#x2F;O 子系统操作驱动的唯一凭据（派发例程、卸载例程都挂在上面）。
-所以问题变成了：怎么找到这块”没登记但真实存在”的可执行内存？
-
-如果我是攻击者，怎么让检测失效？
-
-双杀：摘链 PsLoadedModuleList + 同时从 \Driver 目录删除对象（需调用 ObMakeTemporaryObject 等，但也会留下新的痕迹）；
-不注册 DRIVER_OBJECT：纯内存执行，两个视角都看不到 → 引出本篇方案；
-伪造 DriverSection-&gt;DllBase：指向一个合法模块的基址，交叉比对时被”吸附”到合法基址，产生假阴性；
-彻底 shellcode 化：无 PE 头、无驱动对象，纯手工 hook 内核代码——这是 inline hook 检测的战场（见本系列后续篇）。
-
-检测的本质不是”找到所有坏人”，而是提高攻击者的隐藏成本。
-
-3. 方案对比：DRIVER_OBJECT 特征 vs PE 头特征理论上可以直接扫描 DRIVER_OBJECT 结构体特征，但我最终选择了 PE 头特征。以下是两条路线的对比和取舍过程。
-3.1 DRIVER_OBJECT 特征（精确但脆）DRIVER_OBJECT 是驱动在内核里的身份证。它在 x64 上是 0x150 字节，关键字段如下（以 Win10 1809 x64 实测布局为准，我用 IDA 反编译 afd.sys 的 DriverEntry 验证过字段用法）：
-typedef struct _DRIVER_OBJECT &#123;    CSHORT Type;                    // +0x00  ← 类型魔数 IO_TYPE_DRIVER (0x0B)    CSHORT Size;                    // +0x02  ← 结构大小 0x150    PDEVICE_OBJECT DeviceObject;    // +0x08    ULONG Flags;                    // +0x10    PVOID DriverStart;              // +0x18  ← 驱动代码基址    ULONG DriverSize;               // +0x20    PVOID DriverSection;            // +0x28  ← LDR_DATA_TABLE_ENTRY*（模块链表节点）    PDRIVER_EXTENSION DriverExtension;  // +0x30 ← 扩展结构，内含回指    UNICODE_STRING DriverName;      // +0x38  ← 驱动名字符串    PUNICODE_STRING HardwareDatabase; // +0x48    PFAST_IO_DISPATCH FastIoDispatch; // +0x50    PVOID DriverInit;               // +0x58    PVOID DriverStartIo;            // +0x60    PVOID DriverUnload;             // +0x68    PVOID MajorFunction[IRP_MJ_MAXIMUM_FUNCTION + 1]; // +0x70，共 28 个&#125; DRIVER_OBJECT;
-
-
-💡 类比理解：MajorFunction 就是一张 28 格子的”接线表”，每个格子对应一类 IRP，填的是处理函数地址。驱动要处理什么请求，就往对应格子塞函数指针。这张表就是驱动功能的索引——攻击者想改驱动行为，或者我们想识别驱动，都得看它。
-
-三个最值钱的”指纹”（组合起来几乎不可能被自然数据巧合满足）：
-
-Type == IO_TYPE_DRIVER (0x0B)：I&#x2F;O 子系统初始化驱动对象时写入的魔数；
-DriverExtension-&gt;DriverObject == 自身：_DRIVER_EXTENSION 第一个字段回指驱动对象指针。这是最强的判据——相互引用、自我指涉的数据结构，随机数据几乎不可能形成这种闭环；
-MajorFunction[0..27] 全部指向内核代码区：28 个指针都必须落在内核可执行地址范围内。
-
-但这条路我最终没选，原因很现实：
-
-布局跨版本敏感：字段偏移、IO_TYPE_DRIVER 魔数在不同 Windows 版本可能不同；
-扫描范围难定：对象在非分页池，而 Win10 1809+ 非分页池定位本身就很麻烦；
-实现成本高：需精确结构布局 + 池定位，维护负担重。
-
-
-结论：DRIVER_OBJECT 四关卡校验留着当升级方案，先不实现。
-
-3.2 PE 头特征（粗糙但稳）驱动是一个 PE 镜像，必然以 MZ 头（IMAGE_DOS_SIGNATURE）+ PE 签名（IMAGE_NT_SIGNATURE）开头。这个特征：
-
-跨版本稳定（PE 格式几十年没变过）；
-只需读内存开头几十字节（实现成本低）；
-配合模块列表差集就能区分正常驱动和隐藏驱动。
-
-
-设计取舍：与其”扫结构体特征”（精确但脆），不如”扫 PE 镜像特征 + 和模块列表做差集”（粗糙但稳）——凡是带合法 PE 头、又不在模块列表里的可执行页 &#x3D; 疑似隐藏驱动。
-
-
-
-
-维度
-PE 头特征（本篇实现）
-DRIVER_OBJECT 特征（升级方案）
-
-
-
-特征位置
-镜像开头（MZ&#x2F;PE 签名）
-结构体内部（Type&#x2F;回指&#x2F;MajorFunction）
-
-
-跨版本稳定性
-高（PE 格式恒定）
-低（结构布局随版本变）
-
-
-能抓到
-PE 形态的隐藏驱动
-有完整驱动对象结构的隐藏驱动
-
-
-实现成本
-低（读几十字节）
-高（需精确布局+池定位）
-
-
-4. 扫描范围与性能考量这一步我纠结了最久，也是我觉得这篇最有价值的部分——怎么在合理时间内扫完内核内存，以下都是我的试错过程。
-4.1 无脑方案：全地址空间逐字节扫x64 内核地址空间约 128 TB。按 16 字节步进 &#x3D; 8 万亿次检查，而且大部分地址是无效映射，直接读会触发页面错误蓝屏。这个方案在第一分钟就该被毙掉。
-4.2 改进：按页遍历 + 先验页有效性128 TB &#x2F; 4 KB &#x3D; 340 亿页，每页一次 MmIsAddressValid，哪怕单次 100ns 也要近 1 小时。作为 ARK 的”开机扫描”仍然不可接受。
-4.3 最终选择：先扫”内核驱动加载区”（有已知盲区）穷举地址空间不现实，但纯内存驱动的代码总不能凭空出现——它要么拷进驱动加载区（ntoskrnl 附近的系统模块区域），要么落在非分页池。
-我选择先扫 [ntoskrnl基址 - 0x70000000, ntoskrnl基址] 的驱动加载区：
-&#x27; 扫描范围 = [ntoskrnl基址 - 1.75GB, ntoskrnl基址]ulonglong endAddr = GetKernelModuleBase(&quot;ntoskrnl.exe&quot;, &amp;ModuleSize);uonglong startAddr = EndAddr - 0x70000000;
-
-共约 44.8 万页，比 128 TB 全空间小了四个数量级，从”扫不完”变成”可接受”。
-已知盲区：
-
-攻击者若将驱动代码拷到非分页池高地址段，本版扫不到——这是当前实现最现实的绕过路径；
-v2 计划补全非分页池定位（见第 8 节）。
-
-4.4 多线程分片44.8 万页不能单线程傻扫。解决方式是多线程分片：把 [StartAddr, EndAddr] 按线程数均分，每个线程扫一段，互斥锁保护共享结果数组。
-关键：区间边界必须按 PAGE_SIZE 对齐，否则 StartAddr + i * addrRange 落在页中间，漏掉页首的 MZ 头（PE 头在镜像基址&#x3D;页首）。我一开始没对齐，扫出来的结果少了一大截，debug 半天才发现。
-4.5 性能优化（架构设计阶段即考虑）第一版实现是每页一次 IOCTL——44.8 万页就是 44.8 万次用户态↔内核态往返。作为验证思路的第一版能接受，但正式功能必须优化：
-
-批量化：把一批页地址塞进一个缓冲区，一次 IOCTL 让驱动循环检查，回传结果数组——IOCTL 次数从 44.8 万降到几十；
-驱动内差集：干脆驱动直接拿 SystemModuleInformation 缓存模块基址集合，在驱动内完成差集，用户态只收最终结果。
-
-
-本版先跑通每页 IOCTL 的验证逻辑，优化在 v2 实现。
-
-5. 特征校验：PE 头 + 模块列表差集范围扫到了，接下来是”怎么算命中”。命中判定拆成两半：驱动端认 PE 头，用户态认模块归属。
-5.1 驱动端：MZ → PE 签名两步走内核里逐页检查，读页首数据验证 PE 头。安全读是核心——内核地址不是都能直接解引用的，读无效页会直接蓝屏，所以必须先预检再拷贝：
-// ⚠️ 以下为核心逻辑示意，非完整可编译代码// 实际实现需自行补全安全拷贝、异常处理、入参校验// 1. 页对齐粗检 + ProbeForRead 快速预检（比直接拷贝快一个量级）// 2. 安全拷贝 DOS 头（MZ 魔数）——必须用 MmCopyMemory/VxkCopyMemory，不能直接解引用if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)   // &#x27;MZ&#x27;    return Normal;// 3. MZ 命中，再安全拷贝 PE 头（e_lfanew 指向 PE 签名）if (ntHeader.Signature == IMAGE_NT_SIGNATURE) &#123;  // &#x27;PE\0\0&#x27;    // 4. 疑似 PE 镜像 → 标记为候选隐藏驱动，交用户态做模块归属差集    return HideDriver;&#125;
-
-
-💡 类比理解：这就像保安查门禁——每个进楼的人都要带工牌（PE 头），保安只拦”没登记的人”（模块列表里没有的 PE）。工牌本身人人都有，关键在登记簿上有没有你的名字。
-
-5.2 用户态：和模块列表做差集驱动端只负责”这页长得像 PE 镜像”，它不区分正常驱动和隐藏驱动（正常驱动也是 PE）。区分工作交给用户态：命中页地址用 GetDriverPathByAddr 反查它属于哪个已加载模块——
-
-能查到路径 → 是已知模块的镜像，正常；
-查不到 → 游离 PE 镜像 &#x3D; 疑似隐藏驱动，记录地址，之后和模块列表交叉复核。
-
-6. 实现：驱动端扫 + 用户态多线程调度6.1 总体架构用户态（FreeBasic）                    驱动端（SnowSword.sys）┌─────────────────────┐   IOCTL    ┌─────────────────────────┐│ 多线程分片扫描        │ ─────────▶ │ OptimizedScanKernelMemory││ 每页发一次 IOCTL 询问  │ ◀───────── │ 逐页 PE 特征检查          ││ 互斥锁保护结果数组     │           └─────────────────────────┘│ GetDriverPathByAddr  ││ 差集 → 展示          │└─────────────────────┘
-
-6.2 用户态线程工作函数（核心逻辑）&#x27; ⚠️ 以下为核心逻辑示意，非完整可编译代码&#x27; 实际实现需自行补全错误处理、内存管理、类型安全for (ulonglong addr = p-&gt;startAddr ; ddr &lt;= p-&gt;endAddr ; addr += PAGE_SIZE) &#123;    stMemory.addr   = (PVOID)addr;    stMemory.dwSize = PAGE_SIZE;    &#x27; 每页发一次 IOCTL，让驱动检查这页是不是 PE 镜像    if (IoControl(hDrv, IOCTL_ScanKernelMemory, @stMemory, SizeOf(MemoryStruct),                 @result, SizeOf(MEMORY_SCAN_RESULT)) &lt;&gt; 0) &#123;        if (result &lt;&gt; Normal) &#123;            &#x27; 命中：互斥锁保护下记录结果            MutexLock(p-&gt;hMutex);            &#x27; 记录 Addr 到共享数组            MutexUnlock(p-&gt;hMutex);        &#125;    &#125;&#125;
-
-命中后用户态再调 GetDriverPathByAddr(Addr) 判断模块归属：有路径 → 正常模块；无路径 → 疑似隐藏驱动。
-7. 实验计划（待执行）
-⚠️ 本文是设计稿，实验结果将在后续补充。
-
-
-
-
-步骤
-内容
-状态
-
-
-
-Step 1
-干净系统自检：扫描驱动区，所有 PE 命中都应能归属到已知模块
-⏳ 待执行
-
-
-Step 2
-对抗测试：构造纯内存驱动样本（摘链 + 不注册对象），验证能否检出
-⏳ 待执行
-
-
-Step 1：特征自检（先证明扫描没瞎）在干净的 Win10 1809 虚拟机里，加载 SnowSword 驱动跑扫描：
-
-扫描 [ntoskrnl基址 - 0x70000000, ntoskrnl基址] 驱动区，收集所有 PE 特征命中页；
-对每个命中地址调 GetDriverPathByAddr 反查模块归属，与 SystemModuleInformation 模块列表交叉；
-预期：正常系统里，所有命中都应能归属到已知模块（ntoskrnl、hal、afd 等）；归属不到模块的命中数为 0——这是自检通过的第一道标准；
-用 windbg lm &#x2F; !drvobj 抽查几个命中地址，确认 PE 头校验没有把数据区误认成镜像。
-
-
-自检通过的标准：命中全部可解释——每个 PE 命中都能对应一个已知模块，没有莫名其妙的多余项，也没有把正常驱动漏掉。
-
-Step 2：对抗测试（证明能揪出隐藏驱动）构造一个”纯内存驱动”样本：
-
-写一个普通驱动，DriverEntry 里自摘链：把自己的 DriverSection-&gt;InLoadOrderLinks 从 PsLoadedModuleList 摘掉；
-不调用 IoCreateDevice（不产生设备对象），也不依赖 \Driver 目录注册的常规路径——模拟”双视角皆盲”；
-再跑一遍扫描，预期：模块列表和对象目录都看不到它，但 PE 扫描按镜像特征把它捞出来——GetDriverPathByAddr 查不到归属 &#x3D; 命中列表里出现一个”游离 PE”；
-
-8. 已知局限与后续计划8.1 当前局限
-扫描范围盲区：只扫驱动加载区，非分页池高地址段未覆盖——攻击者把代码拷到非分页池即可绕过；
-IOCTL 频率：每页一次 IOCTL，44.8 万次上下文切换，全扫分钟级；
-PE 头可抹除：攻击者加载后擦掉 MZ&#x2F;PE 魔数即可让本方案失效（但会破坏 I&#x2F;O 子系统的加载假设，纯 shellcode 才能这么干）。
-
-8.2 后续计划
-v2：补全非分页池定位（Win10 1809+ 无 MmNonPagedPoolStart/End 导出，需特征扫 _POOL_DESCRIPTOR 或借 windbg&#x2F;PDB）；
-升级方案：DRIVER_OBJECT 四关卡校验（Type + 回指 + MajorFunction），覆盖”抹掉 PE 头但保留驱动对象”的场景。
-
-9. 遇到的问题与注意事项
-页对齐：扫描区间边界必须按 PAGE_SIZE 对齐，否则漏掉页首的 MZ 头（4.4 节有详细说明）；
-地址类型宽度：内核地址是 64 位的，用户态保存扫描范围&#x2F;结果时必须用 ULongInt，不能用 ULong。截断后起始地址直接错位，扫出来全是噪音；
-安全读内核内存：不能直接解引用，必须先 ProbeForRead 预检 + MmCopyMemory 安全拷贝 + __try/__except 兜底——缺一步都可能蓝屏；
-IOCTL 频率：每页一次 IOCTL 有几十万次上下文切换，全扫分钟级；正式功能必须批量化（见 4.5）；
-调试输出：DbgPrint 别放在逐页循环里，命中才会打还好，每页都打能把调试器刷到卡死；
-误报：PE 头校验命中的”游离镜像”只是疑似，需和模块列表差集 + 人工复核，不自动判定恶意。
-
-参考
-Windows Internals, 7th Edition（加载器 &#x2F; 驱动对象 &#x2F; 内存管理章节）
-Microsoft Learn： IMAGE_NT_HEADERS
-本系列前篇：日报_隐藏驱动检测_改进版（本篇的伏笔出处）、SnowSword–进程隐藏检测实现
-实验佐证：IDA 反编译 win10 1809 afd.sys DriverEntry（DRIVER_OBJECT 字段用法，为升级方案做的预研）
-
-]]></content>
-      <categories>
-        <category>Windows Kernel</category>
-      </categories>
-      <tags>
-        <tag>Anti-Rootkit</tag>
-        <tag>Windows Kernel</tag>
-        <tag>SnowSword</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>驱动检测</tag>
-        <tag>内存特征扫描</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>伪装入口与内存中的隐藏 PE：Hideit 样本逆向分析记录</title>
     <url>/2026/08/28/%E7%AC%AC%E5%8D%81%E4%B8%89%E7%AF%87%E6%97%A5%E6%8A%A5_%E4%BC%AA%E8%A3%85%E5%85%A5%E5%8F%A3%E4%B8%8E%E9%9A%90%E8%97%8FPE%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
     <content><![CDATA[1. 缘起：为什么“入口”值得单独分析恶意样本分析和 CTF Reverse 题目里经常遇到一类情况：main 函数看起来很正常，但程序真正的行为根本不在 main 里。攻击者或出题人会把真正要执行的代码藏起来，可能是加壳、可能是进程镂空、也可能是把一段 shellcode 复制到内存后再执行。
@@ -1717,6 +1607,116 @@ Microsoft PE Format：https://learn.microsoft.com/en-us/windows/win32/debug/pe-f
         <tag>PyInstaller</tag>
         <tag>反混淆</tag>
         <tag>Python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>SnowWall 检测实测：从实验环境到结果复核</title>
+    <url>/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
+    <content><![CDATA[1. 引言前面的文章主要记录 SnowSword 在进程、驱动和内存视角上的检测实践。这次把测试重点放到 SnowWall 对恶意行为链的检测：使用 SnowSword 在授权的隔离实验机中对 Windows 计算器进程执行 DLL 远程注入，然后观察 SnowWall 如何记录、关联并阻断这一串操作。
+本文只讨论防御性检测和实验现象。远程线程注入也可能出现在调试、兼容性工具和安全软件中，因此“命中行为链”是需要进一步复核的高风险信号，而不是脱离上下文的恶意归因。
+2. 实验环境与对照条件实验对象是 Windows 11 中的 CalculatorApp.exe，日志记录的目标 PID 为 4236。发起方是桌面目录下未签名的 SnowSword.exe，PID 为 7108，父进程为 explorer.exe。
+实验采用两组对照：
+
+
+
+条件
+观察结果
+
+
+
+SnowWall 开启
+注入流程出现失败提示，日志记录跨进程内存操作和远程线程创建，并在行为阈值处阻断
+
+
+SnowWall 关闭
+注入流程出现成功提示，作为未启用防护时的对照现象
+
+
+两组截图的窗口布局基本一致，区别主要在 SnowWall 是否仍处于监控状态以及注入结果提示。这里的“成功&#x2F;失败”只表示本次测试程序报告的结果，最终判断仍以日志和目标进程状态为准。
+3. 注入代码的行为拆解RemoteInjectDll 的核心流程可以抽象为：
+OpenProcess(PROCESS_ALL_ACCESS)        ↓VirtualAllocEx  分配目标进程内存        ↓WriteProcessMemory  写入 DLL 路径        ↓ZwCreateThreadEx  在目标进程创建线程                  └─ 线程入口 = LoadLibraryW
+
+代码首先通过 OpenProcess(PROCESS_ALL_ACCESS, ...) 获取目标进程句柄。随后按 DLL 路径长度调用 VirtualAllocEx，再用 WriteProcessMemory 把路径写入目标地址空间，并通过 ReadProcessMemory 做一次写入验证。
+在 64 位分支中，由于 64 位 Windows 的 kernel32.dll 在系统范围内按相同基址加载，远程线程入口可以直接使用本进程解析到的 LoadLibraryW 地址，参数是目标进程中的路径地址。在 32 位分支中，代码额外获取目标进程中的函数地址，构造一段调用 LoadLibraryW 的 x86 shellcode，分配可执行内存后再通过 ZwCreateThreadEx 执行。两条分支的实现细节不同，但从防御侧看都形成了相同的高风险序列：跨进程分配、跨进程写入、跨进程线程创建。
+这也是行为检测比只匹配某个 API 更有价值的地方：单独调用 VirtualAllocEx 可能有正常用途，但它与后续写入和远程线程创建在短时间内连续出现时，语义明显发生变化。
+4. SnowWall 日志中的行为链日志时间集中在 06:52:20 至 06:52:21，关键记录如下：
+4.1 第一步：跨进程分配导致污点升级首先，NtAllocateVirtualMemory 被记录为规则评估事件，随后 SnowWall 输出 CrossAlloc 告警，原因是“污点等级升级为 1”，可疑度分数为 15，并标记为永久污染。
+这一步并没有立即给出最终阻断结论，但它为后续行为建立了上下文状态。也就是说，SnowWall 并非把每一次系统调用都孤立处理，而是为进程累积行为标签。
+4.2 第二步：向 CalculatorApp.exe 写入内存紧接着的 NtWriteVirtualMemory 事件显示：
+
+发起 PID：7108；
+目标 PID：4236；
+目标映像：CalculatorApp.exe；
+CrossProcess=1；
+发起程序未签名，且没有可信祖先进程标记。
+
+该条记录中的 rule_action=1 和 reason=RULE_ALLOW 表示这一条规则评估本身没有阻断，不能理解成整个注入流程已经被 SnowWall 放行。它只是行为链中的中间事件。
+4.3 第三步：远程线程创建触发阈值随后到达 NtCreateThreadEx——用户态调用 ZwCreateThreadEx 最终进入的正是这个内核系统服务，因此日志记录的是 NtCreateThreadEx。日志明确标出 CrossThreadCreate，匹配规则“远程线程注入链”，可疑度分数升至 82.91，并出现 behavior_hit=1、reason=BEHAVIOR_THRESHOLD。
+之后 SnowWall 输出：
+行为累积判定恶意: PID=7108 LastTag=CrossThreadCreateevent=DECISION ... action=BLOCK reason=BEHAVIOR_THRESHOLD
+
+因此，本次实验的完整判定是：前面的单条规则评估允许记录继续进入决策流程；当跨进程分配、写入和远程线程创建形成可疑序列后，行为累计分数达到阈值，SnowWall 最终执行 BLOCK。
+5. 截图与日志的相互印证5.1 SnowWall 开启：注入被阻断
+截图中可以看到 SnowSword 的目标进程列表、Windows 计算器窗口和 SnowWall 窗口，同时弹出“注入失败”的提示。它与日志最后的 action=BLOCK 相互印证：测试程序观察到失败，SnowWall 侧则给出了行为阈值阻断记录。
+5.2 SnowWall 关闭：作为对照的成功提示
+关闭 SnowWall 后，界面弹出“注入成功”的提示。
+6. 结果分析：为什么是“行为链”而不是单点告警本次日志可以整理成一条简化链路：
+未签名 SnowSword.exe        │        ├─ NtAllocateVirtualMemory ── CrossAlloc，污点等级 1，分数 15        │        ├─ NtWriteVirtualMemory ───── CrossProcess=1，写入 PID 4236        │        └─ NtCreateThreadEx ───────── CrossThreadCreate，分数 82.91                                      ↓                              BEHAVIOR_THRESHOLD                                      ↓                                     BLOCK
+
+其中有三个值得注意的设计点：
+
+状态累积：第一次分配操作先建立污点，后续事件可以继承上下文；
+目标关联：日志不仅记录 API，还记录目标 PID、目标映像和跨进程标志；
+分级决策：中间事件可以先记录或允许，最终由行为阈值统一决定是否阻断。
+
+这种策略比“看到 OpenProcess 就直接拦截”更适合降低误报，也比只等待 DLL 加载完成再处理更及时。
+7. 工程观察与防御建议从测试代码和日志可以得到几项工程上的观察：
+
+PROCESS_ALL_ACCESS 权限过宽，防御产品可将句柄权限、调用者身份和目标进程保护级别纳入风险评分；
+VirtualAllocEx 与 WriteProcessMemory 的组合比单独的内存分配更值得关注；
+NtCreateThreadEx 是行为链中的关键收敛点，但检测不应只依赖函数名，还要核对入口地址、目标进程和前序事件；
+32 位分支需要额外的可执行内存和 shellcode，64 位分支则直接将 LoadLibraryW 作为线程入口，跨架构差异可以作为日志字段而不是简单的放行条件；
+测试程序在清理路径中关闭句柄，但还应确保远程内存和 shellcode 在所有失败分支都得到释放，避免实验代码自身引入泄漏或不稳定因素。
+
+对防御侧而言，较稳妥的策略是保留原始事件、建立短时间窗口内的行为关联，并把签名、路径、父子进程关系和目标映像作为辅助证据。最终动作可以按风险等级分为记录、告警、挂起或阻断，同时为调试工具和受信任软件保留明确的审计例外。
+8. 当前局限与证据边界本次实验仍有以下限制：
+
+只有一组目标进程和一次主要日志片段，尚未进行多次重复统计；
+未覆盖签名的合法调试器、不同完整性级别和受保护进程；
+未分别验证 32 位目标进程分支与 64 位目标进程分支的全部路径；
+截图中的“注入成功”来自测试程序提示，尚未用独立工具确认 DLL 模块、入口执行和线程退出状态；
+当前日志没有展示完整规则配置、阈值定义和所有前置事件，因此不能据此推断 SnowWall 在其他版本或其他策略下必然给出相同结果。
+
+换句话说，日志能够证明本次运行中 SnowWall 观察到了这些 API 事件，并在该策略下输出 BLOCK；截图能够证明两种开关状态下界面现象不同。至于检测覆盖率、误报率和跨版本稳定性，还需要更系统的实验设计。
+9. 后续实验计划后续准备建立一个小型复现实验矩阵，至少保留以下字段：
+
+SnowWall 版本、规则版本和 Windows 版本；
+发起进程签名、路径、完整性级别与父进程；
+目标进程架构、保护属性和 PID；
+每个 API 事件的时间戳、目标和规则动作；
+最终动作、测试程序返回值和独立验证结果；
+正常调试场景与注入测试场景的重复次数。
+
+在此基础上，再比较只调用单个 API、缺少前序事件以及完整行为链时的分数变化，才能更准确地评估 SnowWall 的阈值设计和误报边界。
+总结这次实验展示了 SnowWall 如何从 NtAllocateVirtualMemory、NtWriteVirtualMemory 到 NtCreateThreadEx 逐步积累上下文，并将跨进程内存操作与远程线程创建关联为“远程线程注入链”。日志中的 CrossAlloc、CrossThreadCreate、BEHAVIOR_THRESHOLD 和最终 BLOCK，与 SnowWall 开启时的失败提示形成了较完整的证据链；关闭 SnowWall 后的成功提示则提供了直观对照。
+这个结果说明，针对高风险进程行为，按序列关联和分级决策比单点 API 拦截更有解释力。但它仍然是一次受控环境下的功能验证，不能替代多版本、多样本和正常软件基线测试。
+参考
+Microsoft Learn：OpenProcess、VirtualAllocEx、WriteProcessMemory、NtCreateThreadEx
+Windows Internals, 7th Edition
+本系列前篇：日报_SnowSword隐藏驱动检测实测、SnowSword-隐藏驱动检测原理与工程实现
+SnowSword 项目地址：https://github.com/user-lzy/SnowSword
+
+]]></content>
+      <categories>
+        <category>SnowSword Development</category>
+      </categories>
+      <tags>
+        <tag>Windows Kernel</tag>
+        <tag>SnowSword</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>进程行为检测</tag>
+        <tag>安全检测</tag>
+        <tag>SnowWall</tag>
       </tags>
   </entry>
 </search>
