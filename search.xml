@@ -158,6 +158,98 @@ Windows Internals, 7th Edition
       </tags>
   </entry>
   <entry>
+    <title>从 Windows 底层开发到网络安全：我的学习路线</title>
+    <url>/2026/07/30/from-system-development-to-cyber-security/</url>
+    <content><![CDATA[起点我最初接触计算机时，更多关注的是软件开发和系统底层原理。
+相比于单纯调用高级接口完成应用开发，我更喜欢了解程序运行背后的机制，例如：
+
+操作系统如何管理进程和线程
+程序如何加载和执行
+用户态与内核态之间如何交互
+硬件资源如何被系统抽象和管理
+
+随着学习深入，我逐渐发现，系统底层知识与网络安全之间存在非常紧密的联系。
+安全问题很多时候并不是单独存在于某个漏洞或工具中，而是建立在对操作系统、程序运行机制以及计算机体系结构的理解之上。
+因此，我开始尝试向网络安全方向扩展。
+
+当前学习方向目前我的学习重点主要集中在 Windows 平台安全相关方向。
+用户态安全研究用户态是大多数程序运行的环境，也是理解安全机制的重要入口。
+目前主要学习：
+
+Windows API 调用机制
+进程与线程管理
+PE 文件结构
+调试与程序分析
+系统信息采集
+
+这些内容帮助理解一个程序从启动到运行过程中发生了什么。
+
+Windows 内核与驱动开发Windows 内核提供了更加底层的系统控制能力，也是系统安全研究的重要方向。
+目前正在学习：
+
+Windows 驱动开发模型
+WDM 基础结构
+IRP 请求处理机制
+内核对象管理
+用户态与内核态通信
+
+通过驱动开发，可以进一步理解操作系统内部工作方式。
+
+安全工具开发在学习过程中，我也尝试开发一些辅助分析工具。
+目前正在开发的项目是 SnowSword，一个面向 Windows 平台的系统分析工具。
+项目主要用于：
+
+学习 Windows 系统内部结构
+实践系统信息采集
+验证安全分析相关技术
+
+通过实际开发工具，可以将理论知识转化为更加具体的实践经验。
+后续会单独记录项目开发过程中的设计思路和遇到的问题。
+
+后续学习计划未来希望继续完善自己的知识体系：
+Windows方向
+深入学习 Windows Internals
+研究系统安全机制
+学习恶意代码分析方法
+提升逆向分析能力
+
+网络安全基础
+网络协议
+常见漏洞原理
+Web安全基础
+密码学基础
+
+实践方向
+参与 CTF 或安全实验
+阅读优秀安全项目源码
+通过实际项目提升工程能力
+
+
+当前不足目前我的学习方向更加偏向 Windows 系统和底层开发，在网络方向还有很多需要补充的地方。
+例如：
+
+网络协议知识还需要系统学习
+Linux 安全生态接触较少
+安全分析经验仍需要通过更多实践积累
+
+因此，后续会逐步完善自己的知识结构，而不是局限于某一个方向。
+
+总结网络安全是一门综合性很强的领域。
+工具、框架和环境会不断变化，但对计算机基础原理的理解始终具有价值。
+希望通过博客记录自己的学习过程，将零散的知识整理下来，也方便未来回顾自己的成长路线。
+这也是开始记录网络安全学习的第一步。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>网络安全</tag>
+        <tag>Windows</tag>
+        <tag>内核编程</tag>
+        <tag>学习记录</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>SnowSword 隐藏驱动检测原理与工程实现：从多视角枚举到结果关联</title>
     <url>/2026/08/23/SnowSword-%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%8E%9F%E7%90%86%E4%B8%8E%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0/</url>
     <content><![CDATA[1. 为什么需要多视角检测前面的文章分别讨论过模块列表、对象目录和内存特征扫描。把这些内容放在一起后，可以得到一个更清晰的结论：驱动检测的难点不是读取某一个列表，而是判断多个独立视角是否能够相互解释。
@@ -351,95 +443,59 @@ SnowSword 项目地址：https://github.com/user-lzy/SnowSword
       </tags>
   </entry>
   <entry>
-    <title>从 Windows 底层开发到网络安全：我的学习路线</title>
-    <url>/2026/07/30/from-system-development-to-cyber-security/</url>
-    <content><![CDATA[起点我最初接触计算机时，更多关注的是软件开发和系统底层原理。
-相比于单纯调用高级接口完成应用开发，我更喜欢了解程序运行背后的机制，例如：
+    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
+    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
+    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
+这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
+1. 攻击链
+2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
 
-操作系统如何管理进程和线程
-程序如何加载和执行
-用户态与内核态之间如何交互
-硬件资源如何被系统抽象和管理
+误报高：调试器、合法软件更新机制都会调用
+绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
+漏报高：攻击者可用 Process Hollowing（无需远程线程）
 
-随着学习深入，我逐渐发现，系统底层知识与网络安全之间存在非常紧密的联系。
-安全问题很多时候并不是单独存在于某个漏洞或工具中，而是建立在对操作系统、程序运行机制以及计算机体系结构的理解之上。
-因此，我开始尝试向网络安全方向扩展。
-
-当前学习方向目前我的学习重点主要集中在 Windows 平台安全相关方向。
-用户态安全研究用户态是大多数程序运行的环境，也是理解安全机制的重要入口。
-目前主要学习：
-
-Windows API 调用机制
-进程与线程管理
-PE 文件结构
-调试与程序分析
-系统信息采集
-
-这些内容帮助理解一个程序从启动到运行过程中发生了什么。
-
-Windows 内核与驱动开发Windows 内核提供了更加底层的系统控制能力，也是系统安全研究的重要方向。
-目前正在学习：
-
-Windows 驱动开发模型
-WDM 基础结构
-IRP 请求处理机制
-内核对象管理
-用户态与内核态通信
-
-通过驱动开发，可以进一步理解操作系统内部工作方式。
-
-安全工具开发在学习过程中，我也尝试开发一些辅助分析工具。
-目前正在开发的项目是 SnowSword，一个面向 Windows 平台的系统分析工具。
-项目主要用于：
-
-学习 Windows 系统内部结构
-实践系统信息采集
-验证安全分析相关技术
-
-通过实际开发工具，可以将理论知识转化为更加具体的实践经验。
-后续会单独记录项目开发过程中的设计思路和遇到的问题。
-
-后续学习计划未来希望继续完善自己的知识体系：
-Windows方向
-深入学习 Windows Internals
-研究系统安全机制
-学习恶意代码分析方法
-提升逆向分析能力
-
-网络安全基础
-网络协议
-常见漏洞原理
-Web安全基础
-密码学基础
-
-实践方向
-参与 CTF 或安全实验
-阅读优秀安全项目源码
-通过实际项目提升工程能力
+改进设计: 从”单点拦截”转向”行为链评分”
+3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
+3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
 
 
-当前不足目前我的学习方向更加偏向 Windows 系统和底层开发，在网络方向还有很多需要补充的地方。
-例如：
 
-网络协议知识还需要系统学习
-Linux 安全生态接触较少
-安全分析经验仍需要通过更多实践积累
+攻击类型
+标签序列
+加分
+阈值
 
-因此，后续会逐步完善自己的知识结构，而不是局限于某一个方向。
 
-总结网络安全是一门综合性很强的领域。
-工具、框架和环境会不断变化，但对计算机基础原理的理解始终具有价值。
-希望通过博客记录自己的学习过程，将零散的知识整理下来，也方便未来回顾自己的成长路线。
-这也是开始记录网络安全学习的第一步。
+
+远程线程注入
+CrossAlloc → CrossWrite → CrossThreadCreate
++30
+80
+
+
+Process Hollowing
+Unmap → Alloc → Write → Protect_Exec
++35
+80
+
+
+保护属性拆分
+CrossAlloc → CrossWrite → CrossProtect_Exec
++25
+80
+
+
+4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
 ]]></content>
       <categories>
-        <category>学习笔记</category>
+        <category>Malware Analysis</category>
       </categories>
       <tags>
-        <tag>网络安全</tag>
+        <tag>网络安全协会暑期培训</tag>
         <tag>Windows</tag>
-        <tag>内核编程</tag>
-        <tag>学习记录</tag>
+        <tag>Reserve</tag>
+        <tag>恶意样本</tag>
+        <tag>HIPS</tag>
       </tags>
   </entry>
   <entry>
@@ -586,62 +642,6 @@ System32\CodeIntegrity\SiPolicy.p7b（24,972 字节，2026&#x2F;8&#x2F;27 17:54:
       </tags>
   </entry>
   <entry>
-    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
-    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
-    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
-这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
-1. 攻击链
-2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
-
-误报高：调试器、合法软件更新机制都会调用
-绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
-漏报高：攻击者可用 Process Hollowing（无需远程线程）
-
-改进设计: 从”单点拦截”转向”行为链评分”
-3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
-3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
-
-
-
-攻击类型
-标签序列
-加分
-阈值
-
-
-
-远程线程注入
-CrossAlloc → CrossWrite → CrossThreadCreate
-+30
-80
-
-
-Process Hollowing
-Unmap → Alloc → Write → Protect_Exec
-+35
-80
-
-
-保护属性拆分
-CrossAlloc → CrossWrite → CrossProtect_Exec
-+25
-80
-
-
-4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
-]]></content>
-      <categories>
-        <category>Malware Analysis</category>
-      </categories>
-      <tags>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Windows</tag>
-        <tag>恶意样本</tag>
-        <tag>Reserve</tag>
-        <tag>HIPS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>恶意样本静态逆向实践：XOR 函数指针表与进程镂空注入</title>
     <url>/2026/08/08/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
     <content><![CDATA[今天尝试对一个 Windows 恶意样本进行静态逆向分析，主要学习 PE 文件结构、API 调用分析以及恶意程序常见行为模式。
@@ -675,8 +675,8 @@ API 动态解析：函数指针表存于 .data 段，运行时经 qword_408000 ^
       <tags>
         <tag>网络安全协会暑期培训</tag>
         <tag>Windows</tag>
-        <tag>恶意样本</tag>
         <tag>Reserve</tag>
+        <tag>恶意样本</tag>
         <tag>HIPS</tag>
       </tags>
   </entry>
@@ -1142,6 +1142,130 @@ Microsoft Learn：ZwOpenDirectoryObject &#x2F; ObReferenceObjectByHandle &#x2F; 
       </tags>
   </entry>
   <entry>
+    <title>PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</title>
+    <url>/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
+    <content><![CDATA[1. 缘起：为什么还需要第二种进程枚举视角在之前为 SnowSword 实现隐藏进程检测时，我用的方案是暴力扫描 PID：以 4 为步长枚举 0 ~ 0x20000，逐个调用 PsLookupProcessByProcessId 反查 EPROCESS。这个方案能用，但有几个明显的局限：
+
+扫描范围是”假设”不是”机制”——0x20000 上限写死，高 PID 进程可能漏检；
+大量无效查询——有效 PID 中仍有大量未分配槽位，每次都要完整走一次查询；
+依赖 API 语义——PsLookupProcessByProcessId 本身是导出函数，如果攻击者 Hook 了内核查询路径，返回结果同样不可信。
+
+由此想到一个问题：能不能不经过任何查询 API，直接读取 Windows 内核自己维护的 PID → 进程对象映射？这个数据结构就是 PspCidTable。
+
+核心思路：公开 API 是访问内核数据结构的一个入口，直接遍历 PspCidTable 可以降低对单一查询 API 的依赖；但它不能保证绕过对内核数据结构本身的篡改，也不能消除私有结构随系统版本变化带来的兼容性风险。
+
+2. PspCidTable 是什么PspCidTable 是 ntoskrnl.exe 的私有全局变量，也是进程和线程共用的 CID（Client ID）表。PID 与 TID 都在其中。它不是普通用户态进程句柄表，下面的字段和编码说明也必须以具体 Windows 版本的实测结果为准。
+它的类型是 HANDLE_TABLE（未导出结构），遍历的关键字段是 TableCode：
+
+低 2 位：表级数——0 单级、1 二级、2 三级；
+高位：表基址（读取时用 TableCode &amp; ~3 抹零低 2 位）。
+
+单级&#x2F;二级&#x2F;三级结构的关系：
+单级： TableCode → Entry[]（直接索引）二级： TableCode → 二级表指针[512] → Entry[]三级： TableCode → 三级表指针[512] → 二级表指针[512] → Entry[]
+
+其中 Entry 每项 16 字节（x64）。x64 Win10 上 PspCidTable 通常为三级结构。
+3. 如何定位 PspCidTablePspCidTable 是未导出变量，不能直接引用。最直接的办法是从公开导出函数反向追踪。我这里用的是两步跳板定位法：
+
+在 PsLookupProcessByProcessId 开头 0x100 字节内搜特征码 0xE8（call 指令），解析相对偏移，得到它内部调用的 PspReferenceCidTableEntry；
+在 PspReferenceCidTableEntry 内搜特征码 48 8B 05（mov rax, [rip+disp32]），再解析相对偏移，就得到 PspCidTable 变量的运行时地址。
+
+调试时的核心反汇编输出如下：
+fffff806`ca714a2e 488b0583126b00  mov rax,qword ptr [nt!PspCidTable (fffff806`cadc5cb8)]...fffff803`16425cc4 e8a7010000      call nt!PspReferenceCidTableEntry (fffff803`16425e70)
+
+
+小技巧：48 8B 05 在函数里可能命中多处，先通过 call 跳板锁定 PspReferenceCidTableEntry，再在其内部搜 mov，命中率更高——把调用链当路标。
+
+核心实现：
+PVOID GetPspCidTable() &#123;    PVOID PsLookupProcessByProcessIdAddr = (PVOID)PsLookupProcessByProcessId;    PUCHAR StartSearchAddress = NULL;    // 第一步：在 PsLookupProcessByProcessId 内搜索 call 指令（0xE8）    UCHAR pSpecialCode1[1] = &#123; 0xE8 &#125;;    PVOID result = SearchSpecialCode(PsLookupProcessByProcessIdAddr, 0x100, pSpecialCode1, 1);    if (result != NULL) &#123;        // call 相对偏移：目标地址 = 指令地址 + 5 + disp32        LONG offset = *(PLONG)((PUCHAR)result + 1);        StartSearchAddress = (PUCHAR)((PUCHAR)result + 5 + offset);  // 得到 PspReferenceCidTableEntry    &#125; else &#123;        StartSearchAddress = (PUCHAR)PsLookupProcessByProcessIdAddr;  // 降级：直接从头搜索    &#125;    // 第二步：在 PspReferenceCidTableEntry 内搜索 mov rax, [rip+disp32]（48 8B 05）    UCHAR pSpecialCode2[3] = &#123; 0x48, 0x8B, 0x05 &#125;;    result = SearchSpecialCode(StartSearchAddress, 0x100, pSpecialCode2, 3);    if (NULL == result) return NULL;    LONG offset = *(PLONG)((PUCHAR)result + 3);    return (PVOID)((PUCHAR)result + 7 + offset);  // mov rax,[rip+disp] 指令长 7 字节&#125;
+
+（关键逻辑如上，完整工程代码参照 LyShark实现 补齐。）
+4. 遍历 PspCidTable拿到 PspCidTable 地址后，按 TableCode 的级数逐级遍历。整体流程：
+PspCidTable  ↓ 解析 TableCode（级数 + 基址）遍历有效 Entry  ↓ 解码 Entry 得到对象体地址ObGetObjectType 判断是否为进程对象  ↓handle 值即 PID，收进结果数组  ↓生成第二份进程列表 B
+
+4.1 解析 TableCode注意 PspCidTable 变量里存的是 HANDLE_TABLE*，取 TableCode 要两级解引用：先读变量得表地址，再偏移 +8 读 TableCode 字段。
+ULONG64 ul_tableCode = *(PULONG64)(((ULONG64)*(PULONG64)TableBase) + 8);INT i_low2 = ul_tableCode &amp; 3;   // 表级数if (i_low2 == 0)      parse_table_1(ul_tableCode &amp; ~3, 0, 0, Callback, Context); // 单级else if (i_low2 == 1) parse_table_2(ul_tableCode &amp; ~3, 0, Callback, Context);    // 二级else if (i_low2 == 2) parse_table_3(ul_tableCode &amp; ~3, Callback, Context);       // 三级
+
+4.2 逐级遍历三级表：在当前观察到的 x64 版本中，每层通常是 512 项的指针数组（每项 8 字节），逐级取指针，最底层是 Entry 数组（每项 16 字节）。这里的层级、数量和字段布局不是稳定的公开接口，必须按目标系统版本验证。MmIsAddressValid 只能作为有限的预检，不能替代对象生命周期管理或并发同步。
+4.3 Entry 解码（当前版本假设）在当前参考实现假设下，PspCidTable 使用“锁定句柄”格式，Entry 的低 16 位是引用计数或属性位，对象体地址需要这样解码（右移 16 位并按 16 字节对齐）：
+ULONG64 ul_decode = (LONG64)ul_recode &gt;&gt; 0x10;ul_decode &amp;= 0xfffffffffffffff0;
+
+4.4 Client ID 与 PID 的对应关系在 CID 表语义下，条目的 Client ID 数值可以对应 PID 或 TID；只有通过对象类型判断为进程对象后，才能将其作为 PID 收集。当前参考实现假设每个 Entry 承载 4 个 PID 槽位，handle 编码为：
+handle = i * 4 + 1024 * index1 + 512 * index2 * 1024
+
+PID 必然是 4 的倍数——这也解释了之前暴力扫描为什么能以 4 为步长对齐。进程对象判断用对象管理器 API，配合异常保护：
+static BOOLEAN ProcessEnumCallback(HANDLEINFO* pHandleInfo, PVOID Context) &#123;    if (!pHandleInfo-&gt;Object || !MmIsAddressValid(pHandleInfo-&gt;Object))        return TRUE;  // 无效 Entry 跳过    _try &#123;        if (ObGetObjectType(pHandleInfo-&gt;Object) == *PsProcessType) &#123;            // handle 直接作为 PID 存入数组            EnumContext-&gt;ProcessArray[EnumContext-&gt;ProcessCount++] = pHandleInfo-&gt;Handle;        &#125;    &#125;    _except(EXCEPTION_EXECUTE_HANDLER) &#123;        // 对象可能已被释放，异常时跳过而非蓝屏    &#125;    return TRUE;&#125;
+
+5. 与现有方案的关系和验证意义PID 暴力枚举的表面形式是遍历 PID 数值，但每次查询仍然依赖 PsLookupProcessByProcessId 访问内核维护的 CID 映射。因此，它与直接遍历 PspCidTable 并不是两个独立的数据源。
+两种方案的主要区别在于访问路径：
+
+间接 CID 查询：遍历候选 PID，通过公开 API 查询对应的进程对象；
+直接 CID 表遍历：定位并解析私有的 PspCidTable，再根据对象类型筛选进程对象。
+
+6. 实验设计
+
+
+状态
+间接 CID 查询
+直接 CID 表遍历
+预期结论
+
+
+
+正常进程
+✓
+✓
+正常
+
+
+ActiveProcessLinks 隐藏
+✗
+✓
+检出
+
+
+PspCidTable 隐藏
+✓
+✗
+检出
+
+
+两边同时隐藏
+✗
+✗
+多源方案仍有盲区
+
+
+从最后一行可以得出结论：检测机制不是”万能探测器”，而是攻击面与数据源之间的博弈——每多一个可信数据源，攻击者就得多篡改一个地方，但盲区始终存在。
+7. 遇到的问题
+两级解引用：一开始只解了一次引用，把 PspCidTable 变量地址当成了表地址，遍历全乱；后来意识到它是 HANDLE_TABLE*。
+遍历次数困惑：参考实现里一级表循环写的是 for (i &lt; 512) // 256?，作者自己也标了疑惑——表大小 4K &#x2F; 每项 16B 应该是 256 项，实际循环却写 512 次，这部分涉及每个 Entry 承载 4 个 handle 的映射，还需要再验证。
+并发修改：遍历过程中 TableCode 和各级表可能被句柄增删或扩容修改。未经确认不应直接依赖内部锁；当前方案只能接受轻微不一致，后续需要评估版本相关的快照、重试或结果去重策略。
+
+8. 展望
+在 Win10、Win11 等目标版本上分别确认 HANDLE_TABLE 布局、TableCode 层级、Entry 数量和对象指针编码；
+为直接遍历逻辑增加版本识别、特征匹配失败处理、遍历边界检查和结果去重，避免把私有结构当作稳定接口；
+通过正常进程创建和退出、PID 较大进程、并发表扩容等场景验证遍历稳定性；
+
+参考
+Windows Internals, 7th Edition（PspCidTable &#x2F; HANDLE_TABLE 相关章节）
+ReactOS 源码（HANDLE_TABLE &#x2F; PspCidTable 的开放实现参考）
+LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（https://www.lyshark.com/post/93beefb4.html）
+本系列前篇：SnowSword–进程隐藏检测实现（PID 暴力扫描方案）
+
+]]></content>
+      <categories>
+        <category>Windows Kernel</category>
+      </categories>
+      <tags>
+        <tag>Anti-Rootkit</tag>
+        <tag>Windows Kernel</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>PspCidTable</tag>
+        <tag>进程枚举</tag>
+        <tag>内核逆向</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>内存暴力搜索隐藏驱动 —— PE 特征扫描 + 模块列表差集</title>
     <url>/2026/08/16/%E6%97%A5%E6%8A%A5_%E5%86%85%E5%AD%98%E6%9A%B4%E5%8A%9B%E6%90%9C%E7%B4%A2DRIVER_OBJECT_%E6%94%B9%E8%BF%9B%E7%89%88/</url>
     <content><![CDATA[1. 伏笔：上一篇留下的那个盲区上一篇（隐藏驱动检测）我讲了两个视角的交叉验证：模块列表（PsLoadedModuleList）和对象目录（\Driver、\FileSystem）。写完我顺手模拟了一下攻击者视角，发现一个问题：
@@ -1351,130 +1475,6 @@ Microsoft Learn： IMAGE_NT_HEADERS
         <tag>网络安全协会暑期培训</tag>
         <tag>驱动检测</tag>
         <tag>内存特征扫描</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</title>
-    <url>/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
-    <content><![CDATA[1. 缘起：为什么还需要第二种进程枚举视角在之前为 SnowSword 实现隐藏进程检测时，我用的方案是暴力扫描 PID：以 4 为步长枚举 0 ~ 0x20000，逐个调用 PsLookupProcessByProcessId 反查 EPROCESS。这个方案能用，但有几个明显的局限：
-
-扫描范围是”假设”不是”机制”——0x20000 上限写死，高 PID 进程可能漏检；
-大量无效查询——有效 PID 中仍有大量未分配槽位，每次都要完整走一次查询；
-依赖 API 语义——PsLookupProcessByProcessId 本身是导出函数，如果攻击者 Hook 了内核查询路径，返回结果同样不可信。
-
-由此想到一个问题：能不能不经过任何查询 API，直接读取 Windows 内核自己维护的 PID → 进程对象映射？这个数据结构就是 PspCidTable。
-
-核心思路：公开 API 是访问内核数据结构的一个入口，直接遍历 PspCidTable 可以降低对单一查询 API 的依赖；但它不能保证绕过对内核数据结构本身的篡改，也不能消除私有结构随系统版本变化带来的兼容性风险。
-
-2. PspCidTable 是什么PspCidTable 是 ntoskrnl.exe 的私有全局变量，也是进程和线程共用的 CID（Client ID）表。PID 与 TID 都在其中。它不是普通用户态进程句柄表，下面的字段和编码说明也必须以具体 Windows 版本的实测结果为准。
-它的类型是 HANDLE_TABLE（未导出结构），遍历的关键字段是 TableCode：
-
-低 2 位：表级数——0 单级、1 二级、2 三级；
-高位：表基址（读取时用 TableCode &amp; ~3 抹零低 2 位）。
-
-单级&#x2F;二级&#x2F;三级结构的关系：
-单级： TableCode → Entry[]（直接索引）二级： TableCode → 二级表指针[512] → Entry[]三级： TableCode → 三级表指针[512] → 二级表指针[512] → Entry[]
-
-其中 Entry 每项 16 字节（x64）。x64 Win10 上 PspCidTable 通常为三级结构。
-3. 如何定位 PspCidTablePspCidTable 是未导出变量，不能直接引用。最直接的办法是从公开导出函数反向追踪。我这里用的是两步跳板定位法：
-
-在 PsLookupProcessByProcessId 开头 0x100 字节内搜特征码 0xE8（call 指令），解析相对偏移，得到它内部调用的 PspReferenceCidTableEntry；
-在 PspReferenceCidTableEntry 内搜特征码 48 8B 05（mov rax, [rip+disp32]），再解析相对偏移，就得到 PspCidTable 变量的运行时地址。
-
-调试时的核心反汇编输出如下：
-fffff806`ca714a2e 488b0583126b00  mov rax,qword ptr [nt!PspCidTable (fffff806`cadc5cb8)]...fffff803`16425cc4 e8a7010000      call nt!PspReferenceCidTableEntry (fffff803`16425e70)
-
-
-小技巧：48 8B 05 在函数里可能命中多处，先通过 call 跳板锁定 PspReferenceCidTableEntry，再在其内部搜 mov，命中率更高——把调用链当路标。
-
-核心实现：
-PVOID GetPspCidTable() &#123;    PVOID PsLookupProcessByProcessIdAddr = (PVOID)PsLookupProcessByProcessId;    PUCHAR StartSearchAddress = NULL;    // 第一步：在 PsLookupProcessByProcessId 内搜索 call 指令（0xE8）    UCHAR pSpecialCode1[1] = &#123; 0xE8 &#125;;    PVOID result = SearchSpecialCode(PsLookupProcessByProcessIdAddr, 0x100, pSpecialCode1, 1);    if (result != NULL) &#123;        // call 相对偏移：目标地址 = 指令地址 + 5 + disp32        LONG offset = *(PLONG)((PUCHAR)result + 1);        StartSearchAddress = (PUCHAR)((PUCHAR)result + 5 + offset);  // 得到 PspReferenceCidTableEntry    &#125; else &#123;        StartSearchAddress = (PUCHAR)PsLookupProcessByProcessIdAddr;  // 降级：直接从头搜索    &#125;    // 第二步：在 PspReferenceCidTableEntry 内搜索 mov rax, [rip+disp32]（48 8B 05）    UCHAR pSpecialCode2[3] = &#123; 0x48, 0x8B, 0x05 &#125;;    result = SearchSpecialCode(StartSearchAddress, 0x100, pSpecialCode2, 3);    if (NULL == result) return NULL;    LONG offset = *(PLONG)((PUCHAR)result + 3);    return (PVOID)((PUCHAR)result + 7 + offset);  // mov rax,[rip+disp] 指令长 7 字节&#125;
-
-（关键逻辑如上，完整工程代码参照 LyShark实现 补齐。）
-4. 遍历 PspCidTable拿到 PspCidTable 地址后，按 TableCode 的级数逐级遍历。整体流程：
-PspCidTable  ↓ 解析 TableCode（级数 + 基址）遍历有效 Entry  ↓ 解码 Entry 得到对象体地址ObGetObjectType 判断是否为进程对象  ↓handle 值即 PID，收进结果数组  ↓生成第二份进程列表 B
-
-4.1 解析 TableCode注意 PspCidTable 变量里存的是 HANDLE_TABLE*，取 TableCode 要两级解引用：先读变量得表地址，再偏移 +8 读 TableCode 字段。
-ULONG64 ul_tableCode = *(PULONG64)(((ULONG64)*(PULONG64)TableBase) + 8);INT i_low2 = ul_tableCode &amp; 3;   // 表级数if (i_low2 == 0)      parse_table_1(ul_tableCode &amp; ~3, 0, 0, Callback, Context); // 单级else if (i_low2 == 1) parse_table_2(ul_tableCode &amp; ~3, 0, Callback, Context);    // 二级else if (i_low2 == 2) parse_table_3(ul_tableCode &amp; ~3, Callback, Context);       // 三级
-
-4.2 逐级遍历三级表：在当前观察到的 x64 版本中，每层通常是 512 项的指针数组（每项 8 字节），逐级取指针，最底层是 Entry 数组（每项 16 字节）。这里的层级、数量和字段布局不是稳定的公开接口，必须按目标系统版本验证。MmIsAddressValid 只能作为有限的预检，不能替代对象生命周期管理或并发同步。
-4.3 Entry 解码（当前版本假设）在当前参考实现假设下，PspCidTable 使用“锁定句柄”格式，Entry 的低 16 位是引用计数或属性位，对象体地址需要这样解码（右移 16 位并按 16 字节对齐）：
-ULONG64 ul_decode = (LONG64)ul_recode &gt;&gt; 0x10;ul_decode &amp;= 0xfffffffffffffff0;
-
-4.4 Client ID 与 PID 的对应关系在 CID 表语义下，条目的 Client ID 数值可以对应 PID 或 TID；只有通过对象类型判断为进程对象后，才能将其作为 PID 收集。当前参考实现假设每个 Entry 承载 4 个 PID 槽位，handle 编码为：
-handle = i * 4 + 1024 * index1 + 512 * index2 * 1024
-
-PID 必然是 4 的倍数——这也解释了之前暴力扫描为什么能以 4 为步长对齐。进程对象判断用对象管理器 API，配合异常保护：
-static BOOLEAN ProcessEnumCallback(HANDLEINFO* pHandleInfo, PVOID Context) &#123;    if (!pHandleInfo-&gt;Object || !MmIsAddressValid(pHandleInfo-&gt;Object))        return TRUE;  // 无效 Entry 跳过    _try &#123;        if (ObGetObjectType(pHandleInfo-&gt;Object) == *PsProcessType) &#123;            // handle 直接作为 PID 存入数组            EnumContext-&gt;ProcessArray[EnumContext-&gt;ProcessCount++] = pHandleInfo-&gt;Handle;        &#125;    &#125;    _except(EXCEPTION_EXECUTE_HANDLER) &#123;        // 对象可能已被释放，异常时跳过而非蓝屏    &#125;    return TRUE;&#125;
-
-5. 与现有方案的关系和验证意义PID 暴力枚举的表面形式是遍历 PID 数值，但每次查询仍然依赖 PsLookupProcessByProcessId 访问内核维护的 CID 映射。因此，它与直接遍历 PspCidTable 并不是两个独立的数据源。
-两种方案的主要区别在于访问路径：
-
-间接 CID 查询：遍历候选 PID，通过公开 API 查询对应的进程对象；
-直接 CID 表遍历：定位并解析私有的 PspCidTable，再根据对象类型筛选进程对象。
-
-6. 实验设计
-
-
-状态
-间接 CID 查询
-直接 CID 表遍历
-预期结论
-
-
-
-正常进程
-✓
-✓
-正常
-
-
-ActiveProcessLinks 隐藏
-✗
-✓
-检出
-
-
-PspCidTable 隐藏
-✓
-✗
-检出
-
-
-两边同时隐藏
-✗
-✗
-多源方案仍有盲区
-
-
-从最后一行可以得出结论：检测机制不是”万能探测器”，而是攻击面与数据源之间的博弈——每多一个可信数据源，攻击者就得多篡改一个地方，但盲区始终存在。
-7. 遇到的问题
-两级解引用：一开始只解了一次引用，把 PspCidTable 变量地址当成了表地址，遍历全乱；后来意识到它是 HANDLE_TABLE*。
-遍历次数困惑：参考实现里一级表循环写的是 for (i &lt; 512) // 256?，作者自己也标了疑惑——表大小 4K &#x2F; 每项 16B 应该是 256 项，实际循环却写 512 次，这部分涉及每个 Entry 承载 4 个 handle 的映射，还需要再验证。
-并发修改：遍历过程中 TableCode 和各级表可能被句柄增删或扩容修改。未经确认不应直接依赖内部锁；当前方案只能接受轻微不一致，后续需要评估版本相关的快照、重试或结果去重策略。
-
-8. 展望
-在 Win10、Win11 等目标版本上分别确认 HANDLE_TABLE 布局、TableCode 层级、Entry 数量和对象指针编码；
-为直接遍历逻辑增加版本识别、特征匹配失败处理、遍历边界检查和结果去重，避免把私有结构当作稳定接口；
-通过正常进程创建和退出、PID 较大进程、并发表扩容等场景验证遍历稳定性；
-
-参考
-Windows Internals, 7th Edition（PspCidTable &#x2F; HANDLE_TABLE 相关章节）
-ReactOS 源码（HANDLE_TABLE &#x2F; PspCidTable 的开放实现参考）
-LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（https://www.lyshark.com/post/93beefb4.html）
-本系列前篇：SnowSword–进程隐藏检测实现（PID 暴力扫描方案）
-
-]]></content>
-      <categories>
-        <category>Windows Kernel</category>
-      </categories>
-      <tags>
-        <tag>Anti-Rootkit</tag>
-        <tag>Windows Kernel</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>PspCidTable</tag>
-        <tag>进程枚举</tag>
-        <tag>内核逆向</tag>
       </tags>
   </entry>
   <entry>
