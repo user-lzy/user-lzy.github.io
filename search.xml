@@ -1,336 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>从 Windows 底层开发到网络安全：我的学习路线</title>
-    <url>/2026/07/30/from-system-development-to-cyber-security/</url>
-    <content><![CDATA[起点我最初接触计算机时，更多关注的是软件开发和系统底层原理。
-相比于单纯调用高级接口完成应用开发，我更喜欢了解程序运行背后的机制，例如：
-
-操作系统如何管理进程和线程
-程序如何加载和执行
-用户态与内核态之间如何交互
-硬件资源如何被系统抽象和管理
-
-随着学习深入，我逐渐发现，系统底层知识与网络安全之间存在非常紧密的联系。
-安全问题很多时候并不是单独存在于某个漏洞或工具中，而是建立在对操作系统、程序运行机制以及计算机体系结构的理解之上。
-因此，我开始尝试向网络安全方向扩展。
-
-当前学习方向目前我的学习重点主要集中在 Windows 平台安全相关方向。
-用户态安全研究用户态是大多数程序运行的环境，也是理解安全机制的重要入口。
-目前主要学习：
-
-Windows API 调用机制
-进程与线程管理
-PE 文件结构
-调试与程序分析
-系统信息采集
-
-这些内容帮助理解一个程序从启动到运行过程中发生了什么。
-
-Windows 内核与驱动开发Windows 内核提供了更加底层的系统控制能力，也是系统安全研究的重要方向。
-目前正在学习：
-
-Windows 驱动开发模型
-WDM 基础结构
-IRP 请求处理机制
-内核对象管理
-用户态与内核态通信
-
-通过驱动开发，可以进一步理解操作系统内部工作方式。
-
-安全工具开发在学习过程中，我也尝试开发一些辅助分析工具。
-目前正在开发的项目是 SnowSword，一个面向 Windows 平台的系统分析工具。
-项目主要用于：
-
-学习 Windows 系统内部结构
-实践系统信息采集
-验证安全分析相关技术
-
-通过实际开发工具，可以将理论知识转化为更加具体的实践经验。
-后续会单独记录项目开发过程中的设计思路和遇到的问题。
-
-后续学习计划未来希望继续完善自己的知识体系：
-Windows方向
-深入学习 Windows Internals
-研究系统安全机制
-学习恶意代码分析方法
-提升逆向分析能力
-
-网络安全基础
-网络协议
-常见漏洞原理
-Web安全基础
-密码学基础
-
-实践方向
-参与 CTF 或安全实验
-阅读优秀安全项目源码
-通过实际项目提升工程能力
-
-
-当前不足目前我的学习方向更加偏向 Windows 系统和底层开发，在网络方向还有很多需要补充的地方。
-例如：
-
-网络协议知识还需要系统学习
-Linux 安全生态接触较少
-安全分析经验仍需要通过更多实践积累
-
-因此，后续会逐步完善自己的知识结构，而不是局限于某一个方向。
-
-总结网络安全是一门综合性很强的领域。
-工具、框架和环境会不断变化，但对计算机基础原理的理解始终具有价值。
-希望通过博客记录自己的学习过程，将零散的知识整理下来，也方便未来回顾自己的成长路线。
-这也是开始记录网络安全学习的第一步。
-]]></content>
-      <categories>
-        <category>学习笔记</category>
-      </categories>
-      <tags>
-        <tag>网络安全</tag>
-        <tag>Windows</tag>
-        <tag>内核编程</tag>
-        <tag>学习记录</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>银狐木马虚拟机分析日报</title>
-    <url>/2026/08/28/yinhu-vm-analysis-diary/</url>
-    <content><![CDATA[1. 缘起：从 Edge 下载的“deepseek 电脑版”这次分析的样本来自 Edge 搜索下载的所谓“deepseek 电脑版”。把它放进隔离虚拟机后，表面上几乎没有任何动作：没有明显窗口、没有稳定的网络行为、连预期中的安装流程也没有出现。
-起初怀疑是样本损坏。后来结合静态分析的入口结构和系统重启后出现的异常，才怀疑它存在虚拟机环境检测，并进一步发现它释放了驱动级组件、修改了系统代码完整性策略。整个过程并不顺利，但留下的证据链比较完整，值得整理成一篇日报。
-2. 启动路径：一段可疑的运行时初始化样本的入口 start 非常短，只做了三件事：
-start  ├─ sub rsp, 28h  ├─ call sub_14001CE6C   ; 初始化运行时值  ├─ add rsp, 28h  └─ jmp sub_140001106   ; 进入真正的启动逻辑
-
-sub_14001CE6C 依次调用 GetSystemTimeAsFileTime、GetCurrentProcessId、GetCurrentThreadId、GetTickCount 和 QueryPerformanceCounter，把这些结果异或组合成一个运行时值，保存在 qword_14003D0A8，同时在 qword_14003D0B0 保存它的按位取反结果。
-单看这段代码，它更像安全 cookie &#x2F; 运行时值初始化，并不能单独证明存在虚拟机检测。真正引起怀疑的是后面的启动路径：
-sub_140001106  └─ call sub_14000113C      ├─ rax != 0 → 继续进入后续逻辑      └─ rax == 0 → jz short loc_14000112F，走退出路径
-
-在虚拟机中运行原始文件时，样本没有继续表现出明显行为。为了确认这个条件分支的含义，我在隔离环境中做了一次最小 patch 实验。
-3. 验证分支含义：一次最小 patch 实验方案 A 很直接：把 test rax, rax 后面的
-jz short loc_14000112F
-
-改成两个字节的 NOP NOP（90 90），让“检测失败”也不再跳向退出分支：
-call sub_14000113Ctest rax, raxnopnop                     ; jz 被抹掉，不再跳转退出分支jmp loc_1400014E0       ; 无条件进入真实逻辑
-
-最初的担心是样本存在内存完整性校验：进程启动后会校验 .text 段内存是否与磁盘原始内容一致，一旦发现被 patch 就判定篡改并退出。实际测试发现该样本没有 CRC 校验，修改后成功在虚拟机中继续运行。
-调试器中的观察也印证了这一点：在 install_q0_3_02+0x166a8 下断，单步进入 sub_14001CE6C 后 rax=00002b992ddfa233，qword_14003D0A8 与取反值均已初始化；随后跳入 sub_140001106，当 sub_14000113C 返回 rax=2 时，test rax, rax 后不会走退出分支。
-这个实验支持“启动条件判断 &#x2F; 环境检测”的假设，但必须保持克制：它只能证明该分支控制样本是否继续执行，不能单独断言样本只检测虚拟机。条件判断可能混合了调试器、系统版本、权限、网络或其他运行环境特征。
-4. 一次代价很高的失误确认启动分支后，我继续运行样本，却没有提前在关键位置设置足够的断点和行为监控。结果样本跑飞，感染了虚拟机并自动重启。
-这次失误的教训很直接：“能跑起来”并不等于“值得继续跑”。对驱动级样本，运行前必须准备好快照、行为监控和关键点断点，否则一次误操作就会污染整个实验环境，让后续分析从“分析样本”变成“处理事故”。
-5. 重启后的异常：驱动加载被代码完整性策略拦截重启之后，虚拟机中的 SnowSword 驱动加载出现异常，用户态调用 ZwLoadDriver 返回 0xC0E90002，但用户态功能尚可使用。同时，干掉了银狐驱动 ranchserv.jpg 的服务后，它还会被自动拉起。
-奇怪的是，挂上 WinDbg 后，同一个驱动又表现为可以加载。这个差异不能简单归结为“驱动文件时好时坏”。沿着内核加载路径下断点，经过 NtLoadDriver → IopLoadDriverImage → IopLoadDriver → MmLoadSystemImage 后，WinDbg 直接给出了关键提示：
-violated SI policy, will fail to load for scenario 0 !It is now allowed to load because BD is attached.
-
-这说明加载失败是由 SI（代码完整性）策略拦截导致的，而不是文件损坏或注册表缺失；BD 可以理解为内核调试器附加状态。调试器附加后允许加载，恰好解释了“普通启动失败、挂 WinDbg 成功”的表象，但它不能证明驱动签名有效，也不能证明系统策略已经恢复。
-6. CodeIntegrity 日志与 SiPolicy.p7b 时间戳在 Microsoft-Windows-CodeIntegrity/Operational 日志中，SnowSword.sys 对应了两类关键事件：
-
-事件 3077：代码完整性判断该驱动不满足 Authenticode 签名级别要求，或违反了当前代码完整性策略（Policy ID：{a244370e-44c9-4c06-b551-f6016e563076}）；
-事件 3004：系统无法验证映像完整性，提示找不到文件哈希，可能是签名错误、文件损坏或未知来源软件。
-
-日志时间覆盖 2026&#x2F;8&#x2F;27 16:29、17:23 和 2026&#x2F;8&#x2F;28 7:27、7:30，被加载对象均为 C:\Users\21607\Desktop\SnowSword.sys。
-查看 System32\CodeIntegrity 目录时，SiPolicy.p7b 的大小为 24,972 字节，LastWriteTime 为 2026/8/27 17:54:50，明显晚于同目录下其他代码完整性策略文件。结合样本已经具备修改文件、注册表和内核状态的高风险能力，可以提出一个较强的分析判断：系统代码完整性策略文件被样本篡改，或者至少被置于与干净系统明显不同的状态。不过，在没有同版本干净系统基线、文件哈希和签名链之前，仍应把它表述为“基于现有证据的高度疑似篡改”，而不是绝对结论。
-如果需要恢复，正确做法是从干净的同版本 Windows 10 机器导出出厂默认策略，替换虚拟机中被篡改的 SiPolicy.p7b。同时要注意 EFI 分区中仍保留 SiPolicy.p7b 的副本，需要一并修改，否则启动链可能继续使用被篡改的策略。
-7. 伪装驱动 ranchserv.jpg 的接口样本释放出的一个关键文件名是 ranchserv.jpg。从扩展名看它像图片，但实际被当作驱动文件加载。对这个驱动的派遣函数反编译后，可以看到它根据 IRP_MJ_DEVICE_CONTROL 的控制码分派不同功能，其中三个接口尤其值得关注：
-
-
-
-控制码
-行为
-潜在风险
-
-
-
-0x22E04C
-接收文件路径，打开文件后执行未公开操作
-可篡改文件内容、清零 PE 头或签名，导致目标驱动被内核判定为无效镜像
-
-
-0x22E048
-打开并操作注册表键
-可删除或修改安全工具的服务项，或修改驱动加载相关注册表配置
-
-
-0x22E014（材料标注）
-向某个内核结构中的函数指针数组写入任意值
-若该结构是文件系统过滤回调、映像加载通知或对象管理器回调，可挂钩或破坏驱动加载路径，使安全工具驱动加载被拦截或返回错误
-
-
-此外，0x22E044 附近还有版本查询分支，会向调用方返回 2.0.2 之类的字符串；其余分支则处理数据复制、结构初始化等操作。
-这个接口集合解释了后续现象：如果攻击者通过用户态客户端向该驱动传入 ARK&#x2F;HIPS 驱动文件路径，它可以清零 PE 头或篡改签名；如果传入注册表路径，它可以破坏安全工具的服务项；而内核结构写入能力则可以直接干预驱动加载路径，使安全工具在加载阶段就被拦截。
-8. 隐藏与对抗：安全模式下仍然看不见分析过程中还发现了一个隐蔽手法：在安全模式下，即使勾选“显示隐藏文件”，C:\ProgramData 的普通 dir 也看不到银狐的可执行文件，只能看到 Dbg、Huorong、Microsoft 等常规目录。
-使用 dir /a 后，才暴露出：
-C:\ProgramData&gt;dir /a2026/08/27  15:02    &lt;DIR&gt;          ePq5kdxo2026/08/27  15:02             2,949,632 Oaxs10zK.exe2026/08/27  15:02    &lt;DIR&gt;          VMHKT1Zo
-
-原因是被设置了“系统”+“隐藏”双重属性：只勾选“显示隐藏文件”不足以看到它们，必须同时勾选“显示系统文件”才会显形。
-处置时，删除文件后不能直接留空，否则服务或残留进程可能会把它重新创建。更稳妥的做法是：删除后用同名空目录占位，取消 SYSTEM、Everyone 和当前账户对该空目录的全部访问权限，并把目录所有者设为 SYSTEM，让恶意组件既无法重建文件，也无法通过目录权限写入新副本。
-9. 处置思路与证据保全样本已经执行过驱动级动作并触发自动重启后，继续在原虚拟机中“修修补补”并不是优先选择。更稳妥的顺序是：
-
-立即断开网络，保存虚拟磁盘、内存和事件日志副本；
-记录服务项、驱动文件路径、文件哈希、创建时间和签名验证结果；
-对 CodeIntegrity/Operational、System、Service Control Manager 和启动日志做时间线整理；
-使用可信来源重新建立同版本系统快照，再对比 System32\CodeIntegrity 及 EFI 分区中的策略文件；
-只有在证据已经保全后，才在副本上进行策略恢复和驱动加载验证。
-
-恢复策略时应使用与目标系统版本和补丁级别匹配的可信基线，并先确认恢复操作不会破坏取证证据。EFI 分区中的副本也需要纳入检查范围；只替换系统目录中的单个文件，不能自动证明启动链已经恢复。恢复后应重新启动并复核代码完整性事件、策略状态和驱动签名，而不是只看一次 ZwLoadDriver 返回值。
-10. IOC 与复核清单目前能确认或需要重点复核的线索包括：
-
-
-
-类型
-线索
-
-
-
-伪装驱动
-ranchserv.jpg，实际按驱动用途加载；对应服务被删除后会被自动拉起
-
-
-可疑样本
-从 Edge 搜索下载的所谓“deepseek 电脑版”安装包（调试符号名 install_q0_3_02）及其释放文件
-
-
-落地文件
-C:\ProgramData\Oaxs10zK.exe（2,949,632 字节）
-
-
-随机目录
-C:\ProgramData\ePq5kdxo、C:\ProgramData\VMHKT1Zo
-
-
-系统影响
-自动重启、ZwLoadDriver 返回 0xC0E90002、SnowSword 驱动加载异常、ranchserv.jpg 服务自动拉起
-
-
-完整性日志
-CodeIntegrity 事件 3004、3077（Policy ID：{a244370e-44c9-4c06-b551-f6016e563076}）
-
-
-关键策略文件
-System32\CodeIntegrity\SiPolicy.p7b（24,972 字节，2026&#x2F;8&#x2F;27 17:54:50）及 EFI 分区对应副本
-
-
-上表中的路径和文件名来自本次环境记录，不能直接当作通用 IOC。实际处置时还应补充 SHA-256、签名证书链、服务注册表路径、父子进程关系和网络连接记录，并在多个时间点重复采集，避免把残留文件误当成当前活动组件。
-11. 复盘：这次不会忘记的几件事
-在运行样本前先做快照，并准备第二份只读分析副本；
-先建立基线，再运行样本，至少记录驱动、服务、代码完整性策略和启动项；
-关键分支、服务创建、驱动加载和重启触发点必须提前布置观测手段；
-不把反编译器命名当成事实，所有高风险结论都要结合交叉引用、调用栈和系统日志；
-“挂调试器后可以加载”只说明调试上下文改变了系统行为，不表示样本或驱动可信；
-对驱动级样本，恢复快照通常比在已感染系统中继续操作更可靠；
-排查隐藏文件时，要同时勾选“显示系统文件”，不要只依赖“显示隐藏文件”。
-
-总结从目前证据看，这个银狐样本至少表现出三条值得警惕的线索：使用图片扩展名伪装驱动、通过高权限接口修改文件&#x2F;注册表&#x2F;内核状态，以及根据运行环境决定是否继续执行。随后出现的自动重启和 SnowSword 驱动加载失败，则把样本行为与系统代码完整性策略异常联系到了同一条证据链上：SiPolicy.p7b 的时间戳晚于其他策略文件，CodeIntegrity 日志持续报告 3077&#x2F;3004，WinDbg 明确提示 SI policy 拦截，而 ranchserv.jpg 恰好具备能够造成这些影响的文件、注册表和内核写入能力。
-安全分析仍然需要克制。一次虚拟机实验可以提出假设，却不能替代完整取证；一次日志告警可以指出策略冲突，却不能单凭时间戳证明所有文件都由同一个样本修改。只有把静态分析、运行时观测、代码完整性日志、可信基线和快照前后差异放在同一条证据链上，才能更接近可靠结论。
-下一步会在全新快照中补齐文件哈希、服务时间线和策略文件签名信息，并继续完善 SnowSword 对异常驱动和代码完整性事件的关联展示。
-]]></content>
-      <categories>
-        <category>Malware Analysis</category>
-      </categories>
-      <tags>
-        <tag>Windows</tag>
-        <tag>恶意样本</tag>
-        <tag>虚拟机检测</tag>
-        <tag>代码完整性</tag>
-        <tag>SiPolicy</tag>
-        <tag>SnowSword</tag>
-        <tag>网络安全协会暑期培训</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>恶意样本静态逆向实践：XOR 函数指针表与进程镂空注入</title>
-    <url>/2026/08/08/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
-    <content><![CDATA[今天尝试对一个 Windows 恶意样本进行静态逆向分析，主要学习 PE 文件结构、API 调用分析以及恶意程序常见行为模式。
-1. 分析过程今天尝试第一次完整分析一个 Windows 恶意样本。最开始通过 PE 信息确认样本结构，随后使用 IDA 跟踪关键函数。在分析过程中发现，样本并没有直接调用敏感 API，而是通过动态解析隐藏真实调用，这也是我第一次比较直观地接触到恶意程序对抗静态分析的方法。随后结合 IDA 对关键函数进行跟踪，发现程序并没有直接调用敏感 API，而是通过动态解析方式获取函数地址，增加静态分析难度。报告依据
-
-样本未直接调用敏感 API，而是在 .data 段存放异或加密的函数指针表（密钥 qword_408000 = 0x6BF72FD7E5809F41），运行时通过 qword_408000 ^ qword_408xxx 还原真实地址，如 0x40100D（WinMain_DecryptCall_Dispatcher）解密出 0x401634 后间接调用。
-示例：sub_401B45 中的 LoadLibraryW(&quot;ADVAPI32.dll&quot;)、OpenSCManagerW 等调用全部经此机制动态解析，规避静态分析。
-
-
-2. 关键发现2.1 进程注入分析分析过程中发现样本通过挂起创建进程、远程内存分配以及写入 payload 的方式实现代码注入，涉及 CreateProcessW、VirtualAllocEx、WriteProcessMemory 等 API。报告依据
-
-核心注入函数 sub_4046D1（0x4046D1）实现进程镂空：先 CreateProcessW(自身路径, ..., CREATE_SUSPENDED=0x8000000, ...) 挂起创建进程，再 VirtualAllocEx(hProc, 0, 72, 0x3000, PAGE_EXECUTE_READWRITE=4) 远程分配可执行内存，最后 WriteProcessMemory(hProc, addr, payload, 72, 0) 写入 payload。
-备用注入路径：sub_403851 使用 NtAllocateVirtualMemory &#x2F; NtWriteVirtualMemory（ntdll 原生 API）；sub_403A37 使用 PostQueuedCompletionStatus &#x2F; ZwSetIoCompletion 执行。
-
-
-这让我认识到，HIPS 不应该只关注单个 API 调用，而应该关注 API 调用组合形成的行为链，例如“创建挂起进程 + 远程写入 + 执行权限内存”。
-2.2 反静态调试分析样本存在 API 动态解析、字符串 XOR 加密以及跳板函数等混淆方式，使传统静态分析工具难以直接获得真实行为。报告依据
-
-API 动态解析：函数指针表存于 .data 段，运行时经 qword_408000 ^ qword_408xxx 异或还原（密钥 0x6BF72FD7E5809F41）。
-字符串 XOR 加密：宽字符 char = 低字节 ^ 高字节（如 0x408008 → ADVAPI32.dll、0x4083BC → bdservicehost.exe）；ANSI 单字节 XOR 尾字节（如 0x408082 → OpenSCManagerW）。
-跳板函数混淆：大量 jmp short 跳板（如 0x401B38 → sub_401B45、0x401FD3 → sub_401FE0、0x40284C → sub_402859），真实函数地址隐藏于异或表之后。
-
-
-这让我进一步理解为什么安全工具需要结合静态分析和运行时行为监控。
-2.3 对 HIPS 设计的启发此次分析也反向验证了之前设计 HIPS 行为规则的一些思路。例如恶意程序常通过多个正常 API 组合完成攻击，因此检测重点应该从单 API 判断转向行为链分析。CREATE_SUSPENDED + VirtualAllocEx + WriteProcessMemory + CreateRemoteThread
-3. 今日总结通过此次分析，我开始从攻击者视角理解 Windows 内部机制。之前开发 ARK&#x2F;HIPS 时更多关注“如何监控系统”，而逆向分析让我认识到“攻击者如何利用系统机制”同样重要。后续计划继续学习恶意代码分析，并将相关行为抽象为安全检测规则。
-]]></content>
-      <categories>
-        <category>Malware Analysis</category>
-      </categories>
-      <tags>
-        <tag>Windows</tag>
-        <tag>恶意样本</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Reserve</tag>
-        <tag>HIPS</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
-    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
-    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
-这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
-1. 攻击链
-2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
-
-误报高：调试器、合法软件更新机制都会调用
-绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
-漏报高：攻击者可用 Process Hollowing（无需远程线程）
-
-改进设计: 从”单点拦截”转向”行为链评分”
-3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
-3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
-
-
-
-攻击类型
-标签序列
-加分
-阈值
-
-
-
-远程线程注入
-CrossAlloc → CrossWrite → CrossThreadCreate
-+30
-80
-
-
-Process Hollowing
-Unmap → Alloc → Write → Protect_Exec
-+35
-80
-
-
-保护属性拆分
-CrossAlloc → CrossWrite → CrossProtect_Exec
-+25
-80
-
-
-4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
-]]></content>
-      <categories>
-        <category>Malware Analysis</category>
-      </categories>
-      <tags>
-        <tag>Windows</tag>
-        <tag>恶意样本</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Reserve</tag>
-        <tag>HIPS</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Hexo + Butterfly 个人技术博客搭建全记录</title>
     <url>/2026/07/27/Hexo-Butterfly%E5%8D%9A%E5%AE%A2%E6%90%AD%E5%BB%BA%E5%85%A8%E8%AE%B0%E5%BD%95/</url>
     <content><![CDATA[前言作为一个正在学习网络安全的技术人，我一直想拥有一个属于自己的技术博客，用来记录学习笔记和踩坑经验。经过一段时间的折腾，终于把博客搭起来了。这篇文章完整记录了从环境准备到部署上线的全过程，希望能帮助到同样想搭建博客的你。一、环境准备与Hexo初始化1.1 安装Node.jsHexo基于Node.js运行，建议安装18.x或更高版本。安装完成后在终端验证版本：
@@ -390,322 +60,101 @@ hexo clean    # 清除旧缓存文件hexo generate # 生成静态网站文件hex
       </tags>
   </entry>
   <entry>
-    <title>[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥</title>
-    <url>/2026/08/01/%E6%97%A5%E6%8A%A5_PEPEPE_%E5%B7%B2%E7%9F%A5%E6%98%8E%E6%96%87%E6%94%BB%E5%87%BB/</url>
-    <content><![CDATA[题目信息
+    <title>SnowSword 进程隐藏检测实现：从用户态枚举到内核对象分析</title>
+    <url>/2026/08/04/SnowSword-%E8%BF%9B%E7%A8%8B%E9%9A%90%E8%97%8F%E6%A3%80%E6%B5%8B-%E4%BF%AE%E6%AD%A3%E7%89%88/</url>
+    <content><![CDATA[项目地址：https://github.com/user-lzy/SnowSword1. 为什么需要检测隐藏进程在开发 SnowSword 之前，我曾使用过一些 ARK 类工具分析 Windows 系统。但在实际测试过程中发现，不同工具对于进程枚举结果可能存在差异。因此，我希望实现一种多视角交叉验证的方法，而不是依赖单一 API。
+众所周知，部分恶意程序会通过 Hook R3 API（Process32Next、NtQuerySystemInformation）、Hook R0 API（ZwQuerySystemInformation）或篡改 R0 内核结构（EPROCESS 摘链、Hook ZwQuerySystemInformation）来隐藏进程，避免被用户通过系统自带的任务管理器等普通安全工具发现其活动。但正所谓”天网恢恢，疏而不漏”，我们可以使用一种交叉对比进程枚举结果的方法找出恶意程序的隐藏进程。
+1.1 为什么需要多视角枚举？Windows中不存在一个绝对可信的进程观察视角。
+用户态工具、对象管理器、内核进程管理机制分别维护着不同的信息来源。如果攻击者只修改其中一种视角，例如Hook某个用户态接口，其他来源仍可能暴露异常。
+因此，SnowSword的设计思路不是寻找一个万能的进程枚举接口，而是从多个角度获取进程信息，并通过结果差异发现异常。
+2. 不同视角下的进程枚举机制2.1 用户态 API 枚举
+Process32First + Process32Next：Windows 用户态最常见的进程枚举接口。但是它依赖用户态 API 调用链，如果攻击者 IAT Hook &#x2F; Inline Hook 它或者更底层的数据来源，返回结果可能已经不可信。因此 SnowSword 中并不将其作为最终判断依据，而是作为一个”普通用户看到的世界”。
+
+NtQuerySystemInformation(SystemProcessInformation, …)：Native API（由于不存在于导入库中，需要自行通过 GetModuleHandle + GetProcAddress 动态调用），可以获取更多进程信息，但由于它已十分出名，所以通常也会被列入 hook 名单。
 
 
-项目
-内容
+2.2 内核态 API 枚举
+ZwQuerySystemInformation(SystemProcessInformation, …)：内核最常见的进程枚举手段，获取的进程信息同 R3 的 NtQuerySystemInformation(SystemProcessInformation, ...)，但相较 R3 更可信。
+
+3. SnowSword 实现方案3.1 用户态获取进程列表
+调用 Process32First + Process32Next 获取进程列表 a，作为进程列表基线用于交叉检测隐藏进程。
+
+除了传统进程枚举 API 外，SnowSword 还尝试从系统句柄角度观察进程。Windows 中的进程对象通常会对应一个 Process 类型句柄，因此可以通过 SystemHandleInformation 获取全局句柄表，再筛选其中的 Process 和 Thread 类型。通过句柄反向获得 PID，形成进程列表 b。最后去重。
 
 
+3.2 驱动获取进程列表Windows 内核分配 PID 时采用 4 字节对齐的增量分配策略——PID 的高 30 位用于索引进程对象数组，低 2 位固定为 0。因此合法 PID 必然是 4 的倍数，以 4 为步长暴力枚举可以跳过 75% 的无效值。
+具体实现：以 4 为步长暴力枚举 0 ~ 0x20000（131072）的 PID，尝试调用 PsLookupProcessByProcessId 获取进程对象指针，成功且 PsGetProcessExitStatus 返回值等于 STATUS_PENDING（为了排除部分僵尸进程）则将 PID 插入进程列表 c。
+该方法本质上利用了系统 PID 管理机制进行间接验证，与直接遍历 PspCidTable 相比实现简单，但效率和兼容性存在限制。
+最初考虑过直接遍历 EPROCESS 链表，但是该方案存在两个问题：
 
-赛事
-MoeCTF 2021
+不同 Windows 版本结构变化较大。
+如果攻击者采用 DKOM 隐藏，同样可能影响该链表。
 
+因此 SnowSword 选择通过 PID 反查方式，利用系统自身 PID 管理机制获取进程对象。虽然扫描范围有限，但不依赖固定结构偏移。
+3.3 用户态与内核态结果比较比较进程列表 a、b、c，在 UI 中标记出现在列表 b&#x2F;c 但未出现在列表 a 的隐藏进程。
+3.4 隐藏进程检测实验
 
-题目
-PEPEPE
+截图说明：
 
-
-分值
-443 分
-
-
-类型
-Reverse &#x2F; PE 文件还原
-
-
-考点
-已知明文攻击、XOR 流密码、PE 文件结构
+SnowSword 进程列表（上方）：可以看到 TestAPI.exe（PID 9812，黄色高亮），以及多个 (Exited) 进程（已退出但内核对象尚未销毁的僵尸进程）。
+任务管理器（下方）：无法看到 TestAPI.exe，因为已被 InlineHook 摘除。
+TestAPI 窗口（右下）：提供”Hook”按钮，用于触发 DLL 注入。
 
 
-平台
-NSSCTF (https://www.nssctf.cn/problem/3391)
+我编写了一个测试程序 TestAPI.exe（PID 9812），并开发了一个 InlineHook.dll。通过 TestAPI，将 InlineHook.dll 分别注入到**任务管理器（Taskmgr.exe）**和 SnowSword 两个进程中。
+InlineHook.dll 的核心逻辑是 Hook ntdll.dll 中的 NtQuerySystemInformation 函数，当查询 SystemProcessInformation（进程列表）时，将 TestAPI.exe 从返回的链表数据中”摘除”。核心逻辑如下：
+// 注意：本代码假设被隐藏进程不会出现在链表的第一个节点// （SystemProcessInformation 的头节点通常是 System Idle Process）// 生产环境需要处理头节点被隐藏的情况NTSTATUS NTAPI Fake_NtQuerySystemInformation(    SYSTEM_INFORMATION_CLASS SystemInformationClass,    PVOID SystemInformation,    ULONG SystemInformationLength,    PULONG ReturnLength)&#123;    NTSTATUS Status = Old_NtQuerySystemInformation(        SystemInformationClass,        SystemInformation,        SystemInformationLength,        ReturnLength    );    if (!NT_SUCCESS(Status) || SystemInformationClass != SystemProcessInformation)        return Status;    // 双指针法：pNextOffset 指向前一个节点的 NextEntryOffset 字段（或头指针）    PULONG pNextOffset = (PULONG)&amp;((PSYSTEM_PROCESS_INFORMATION)SystemInformation)-&gt;NextEntryOffset;    PSYSTEM_PROCESS_INFORMATION Current = (PSYSTEM_PROCESS_INFORMATION)SystemInformation;    while (Current)    &#123;        BOOL Hide = (Current-&gt;ImageName.Buffer &amp;&amp;            _wcsicmp(Current-&gt;ImageName.Buffer, L&quot;TestAPI.exe&quot;) == 0);        if (Hide)        &#123;            if (Current-&gt;NextEntryOffset == 0)            &#123;                // 尾节点：将前一个节点的偏移设为 0                *pNextOffset = 0;                break;            &#125;            else            &#123;                // 中间节点：跳过当前节点                *pNextOffset += Current-&gt;NextEntryOffset;                Current = (PSYSTEM_PROCESS_INFORMATION)((PUCHAR)Current + Current-&gt;NextEntryOffset);                continue;            &#125;        &#125;        // 推进        if (Current-&gt;NextEntryOffset == 0)            break;        pNextOffset = &amp;Current-&gt;NextEntryOffset;        Current = (PSYSTEM_PROCESS_INFORMATION)((PUCHAR)Current + Current-&gt;NextEntryOffset);    &#125;    return Status;&#125;
 
-
-题目描述
-题目提供了一个经过加密的 PE 文件和加密程序源码，需要分析加密算法，并恢复原始可执行文件。
-
-加密后的文件头部已无 MZ 标志，用 file 命令识别为纯 data。
-加密原理分析查看加密器 main.c 的核心逻辑：
-scanf(&quot;%s&quot;, input);                      // 输入 key...for (int i = 0; i &lt; file_len - 1; i++) &#123;    bank[i] = getc(f);    bank[i] = ~(bank[i] ^ input[i % input_len]);   // 逐字节 XOR 后取反&#125;
-
-加密公式：
-enc[i] = ~(org[i] ^ key[i % key_len])
-
-其中 key 是加密时输入的字符串，按 i % key_len 循环使用。这是一个循环 XOR 流密码（多了一步取反），强度完全取决于 key 的保密性。
-解题思路：已知明文攻击为什么能攻击？PE 文件有固定不变的结构——文件头。任何 PE 文件都以 MZ（0x4D 0x5A）开头，后面跟着结构固定的 DOS Header（大量字节是固定的 0x00）。这就是”已知明文”。
-
-前 64 字节的 DOS Header 中，大量字节是固定值或零值，非常适合作为已知明文。
-Key 恢复把加密公式变形：
-key[i] = ~enc[i] ^ org[i]
-
-用加密文件的前若干字节 + 已知的 PE 头部明文，恢复 key 的循环片段，检测周期得完整 key（其中 plain_head 取自原始文件 file_org 的前 64 字节，即标准 DOS Header）：
-def recover_key(data: bytes, plain_head: bytes) -&gt; bytes:    ks = bytes([(~data[i]) &amp; 0xFF ^ plain_head[i] for i in range(len(plain_head))])    for period in range(1, len(ks) // 2 + 1):        if all(ks[i] == ks[i % period] for i in range(len(ks))):            return ks[:period]    return ks
-
-运行结果：
-[+] recovered key = b&#x27;reverierwilllikeyou!&#x27; (len=20)
-
-key &#x3D; reverierwilllikeyou!（20 字节），呼应了 file_org.c 中的 “I think ReverierXu will like you!”。
-完整还原def decrypt(data: bytes, key: bytes) -&gt; bytes:    return bytes([(~b) &amp; 0xFF ^ key[i % len(key)] for i, b in enumerate(data)])
-
-验证结果：
-
-file_restored 被识别为 PE32 executable
-与原始文件对比，前 45559&#x2F;45560 字节完全一致
-
-
-最后一个字节差异：加密循环只处理 file_len - 1 个字节，末字节为未初始化内存（垃圾值），不影响 PE 完整性。
-
-运行验证$ cp file_restored file_restored.exe &amp;&amp; echo &quot;&quot; | ./file_restored.exe[root@Track.Sh]# Good job, I think ReverierXu will like you![root@Track.Sh]# moectf&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
-
-Flag
-注意：还原后的程序输出的是 moectf{} 格式，而 NSSCTF 平台要求使用 NSSCTF{} 格式提交（题目描述中已注明）。
-
-NSSCTF&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
-
-总结
-识别加密算法为循环 XOR（+取反）流密码
-利用 PE 文件头固定结构 进行已知明文攻击恢复 key
-检测 key 循环周期得到完整 key
-解密整个文件，还原出可运行的 PE，运行得到 flag
-固定格式的数据结构会降低简单流密码的安全性，因此在设计加密方案时不能仅依赖 XOR 与固定密钥。
-
-参考
-PE Format - Microsoft Learn
-NSSCTF - PEPEPE
-
-]]></content>
-      <categories>
-        <category>CTF</category>
-        <category>Reverse Engineering</category>
-      </categories>
-      <tags>
-        <tag>Windows</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>CTF</tag>
-        <tag>Reverse</tag>
-        <tag>PE</tag>
-        <tag>密码学</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>SnowSword 隐藏驱动检测实测：摘链驱动的识别</title>
-    <url>/2026/08/21/%E6%97%A5%E6%8A%A5_SnowSword%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
-    <content><![CDATA[1. 引言上一篇文章介绍了 SnowSword 的隐藏驱动检测思路：同时观察模块列表、对象目录和内存中的 PE 特征，避免只依赖单一数据源。这次准备了一个测试驱动 TestHideDriver1.sys，尝试验证 SnowSword 能否在测试过程中标记出异常驱动。目前同时保留了 SnowSword 检测结果和 OpenArk 的枚举对比截图，本文只记录截图中能够确认的现象。
-2. 检测思路SnowSword 的驱动检测可以简单理解为三个视角：
-
-
-
-视角
-观察内容
-
-
-
-模块列表
-驱动名称、映像基址、映像大小和路径
-
-
-对象目录
-\\Driver、\\FileSystem 中的驱动对象
-
-
-内存特征
-内存中是否存在带有 PE 特征的可执行映像
-
-
-正常情况下，这些信息应该能够相互对应。如果某个驱动只在一个视角中出现，或者它的基址、大小和路径与其他信息对不上，就应该进入人工复核流程。本次实验的重点是观察 SnowSword 对测试驱动的标记结果，而不是证明 SnowSword 的全能性。
-3. 实验过程实验过程中使用自写 DriverLoader 加载测试驱动，并通过 DebugView 观察驱动输出。测试驱动加载后，在 SnowSword 的“内核模块”页面查看当前模块列表。
-从截图可以看到，列表中出现了：
-
-驱动名称：TestHideDriver1.sys；
-映像基址：0xFFFFF80267140000；
-映像大小：0x1000；
-路径位于用户桌面测试目录；
-该行以红色显示，与周围普通模块的显示效果不同。
-
-4. SnowSword 检测结果
-图中同时保留了测试过程中的几个窗口：
-
-SnowSword：右侧显示内核模块列表，TestHideDriver1.sys 被红色标记；
-DriverLoader：中间窗口用于加载测试驱动；
-DebugView：左侧可以看到测试驱动输出的 Driver is alive! 等调试信息。
-
-从现象上看，测试驱动已经成功加载并运行，SnowSword 也将它与普通内核模块区分显示。这说明当前检测模块至少能够获取到该测试驱动的模块信息，并根据自身规则给出异常标记。
-5. 与 OpenArk 的枚举结果对比
+实验结果：
 
 
 
 工具
-截图中的结果
+是否看到 TestAPI.exe
+原因
 
 
 
-SnowSword
-可以看到 TestHideDriver1.sys，并以红色标记；同时显示其基址、大小和桌面测试路径
+被注入的任务管理器
+❌ 看不到
+NtQuerySystemInformation 被 Hook，链表被篡改
 
 
-OpenArk
-当前驱动列表中未看到 TestHideDriver1.sys，只能看到 SnowSword.sys 和 OpenArkDrv64.sys 等模块
+被注入的 SnowSword
+✅ 能看到
+使用句柄枚举 + 内核驱动反查，不依赖被 Hook 的 R3 API
 
 
-6. 结果分析
-TestHideDriver1.sys 已经进入 SnowSword 的内核模块检测结果；
-SnowSword 能显示它的基址、大小和路径；
-SnowSword 对该测试驱动进行了红色高亮，说明它满足当前隐藏驱动的标记条件；
-OpenArk 的当前驱动列表中未显示该测试驱动，形成了与 SnowSword 的枚举差异；
-DriverLoader 和 DebugView 的窗口可以作为驱动加载和运行状态的辅助证据。
+这就验证了单一 R3 API Hook 无法对抗多视角交叉检测的观点。
+在驱动层枚举时，我们通过 PsGetProcessExitStatus 过滤掉 STATUS_PENDING 以外的进程，避免将已退出进程误判为隐藏进程。而用户态的 Process32Next 通常不会返回这些已退出进程，这也解释了为什么 SnowSword 的进程列表比任务管理器”更长”——它包含了更多内核视角的信息。
+4. 开发过程中遇到的问题4.1 比较结果一开始我想当然以为直接取列表 a 和列表 b&#x2F;c 的差集即可，但 UI 上会出现重复显示的隐藏进程，排查后才发现是因为一个进程可能：被多个进程打开句柄，或是拥有多个线程句柄。所以 Handle-PID 不是简单的一对一关系，需要使用 HashSet 保存 PID。
+4.2 僵尸进程判断问题测试过程中发现，部分已经退出的进程对象仍然可能短时间存在。因此不能简单认为 PsLookupProcessByProcessId 成功即可，需要结合 PsGetProcessExitStatus 进一步判断。
+5. 后续优化方向目前 SnowSword 的隐藏进程检测仍存在限制：
 
-7. 为什么不能只看一个列表驱动检测和进程隐藏检测一样，不能把单一枚举结果当成绝对事实。如果只看模块列表，攻击者可以尝试摘除模块链表记录；如果只看对象目录，也可能遇到未注册对象或结构变化；如果只扫 PE 特征，又可能把残留映像、缓存或版本差异误判为异常。
-更可靠的判断方式是把多个结果关联起来：
-驱动名称 / 基址 / 大小          |          +-- 是否存在于模块列表          +-- 是否能关联到 DRIVER_OBJECT          +-- 是否位于合法映像范围          +-- 是否有对应的运行时行为
+PID 扫描范围固定
+依赖 PsLookupProcessByProcessId
+无法发现所有内核级隐藏方式
 
-8. 当前局限本次实验仍然比较初步，主要局限包括：
+后续计划：
 
-目前只有两张截图，没有干净系统和多次重复测试数据；
-尚未记录完整的扫描范围、耗时、CPU 占用和 IOCTL 次数；
-尚未对 \\Driver、\\FileSystem 和内存 PE 扫描结果进行逐项对照；
-尚未验证非分页池、清除 PE 头以及跨 Windows 版本等场景；
-红色高亮的具体触发规则还需要结合 SnowSword 源码进一步说明。
+解析 PspCidTable 的三级表结构获取进程列表
+增加线程交叉验证
 
-9. 后续计划后续补充实验时，准备保留以下信息：
-
-测试前后的模块列表对比；
-测试驱动是否仍能在对象目录中找到；
-内存扫描命中的地址和模块归属结果；
-SnowSword 的原始调试日志；
-不同 Windows 版本下的重复测试结果。
-
-这样可以把“截图中看到驱动被标红”进一步扩展为完整的证据链，减少单一结果带来的误判。
-总结本次实验中，TestHideDriver1.sys 成功加载并运行，SnowSword 在内核模块列表中对它进行了红色标记，而 OpenArk 的当前驱动列表中没有显示该项。这个结果说明 SnowSword 与 OpenArk 对该测试状态的枚举结果存在差异，也说明多视角交叉检测能够发现单一工具不一定展示的对象，但这只是一次功能验证，而不是完整的隐藏驱动检测实验。
-对于 ARK 工具来说，发现异常只是第一步。只有把模块列表、对象目录、内存特征和运行时行为结合起来，并经过独立工具复核，才能逐步提高检测结果的可信度。
 参考
+Microsoft Learn - Process32Next function
+看雪论坛 - Windows 进程枚举 NtQuerySystemInformation(SystemProcessInformation)
 Windows Internals, 7th Edition
-Microsoft Learn：IMAGE_NT_HEADERS、MmCopyMemory
-本系列前篇：日报_隐藏驱动检测_改进版、日报_内存暴力搜索DRIVER_OBJECT_改进版
-SnowSword 项目地址：https://github.com/user-lzy/SnowSword
 
 ]]></content>
       <categories>
         <category>SnowSword Development</category>
       </categories>
       <tags>
-        <tag>SnowSword</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
         <tag>Anti-Rootkit</tag>
-        <tag>驱动检测</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>SnowWall 检测实测：从实验环境到结果复核</title>
-    <url>/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
-    <content><![CDATA[1. 引言前面的文章主要记录 SnowSword 在进程、驱动和内存视角上的检测实践。这次把测试重点放到 SnowWall 对恶意行为链的检测：使用 SnowSword 在授权的隔离实验机中对 Windows 计算器进程执行 DLL 远程注入，然后观察 SnowWall 如何记录、关联并阻断这一串操作。
-本文只讨论防御性检测和实验现象。远程线程注入也可能出现在调试、兼容性工具和安全软件中，因此“命中行为链”是需要进一步复核的高风险信号，而不是脱离上下文的恶意归因。
-2. 实验环境与对照条件实验对象是 Windows 11 中的 CalculatorApp.exe，日志记录的目标 PID 为 4236。发起方是桌面目录下未签名的 SnowSword.exe，PID 为 7108，父进程为 explorer.exe。
-实验采用两组对照：
-
-
-
-条件
-观察结果
-
-
-
-SnowWall 开启
-注入流程出现失败提示，日志记录跨进程内存操作和远程线程创建，并在行为阈值处阻断
-
-
-SnowWall 关闭
-注入流程出现成功提示，作为未启用防护时的对照现象
-
-
-两组截图的窗口布局基本一致，区别主要在 SnowWall 是否仍处于监控状态以及注入结果提示。这里的“成功&#x2F;失败”只表示本次测试程序报告的结果，最终判断仍以日志和目标进程状态为准。
-3. 注入代码的行为拆解RemoteInjectDll 的核心流程可以抽象为：
-OpenProcess(PROCESS_ALL_ACCESS)        ↓VirtualAllocEx  分配目标进程内存        ↓WriteProcessMemory  写入 DLL 路径        ↓ZwCreateThreadEx  在目标进程创建线程                  └─ 线程入口 = LoadLibraryW
-
-代码首先通过 OpenProcess(PROCESS_ALL_ACCESS, ...) 获取目标进程句柄。随后按 DLL 路径长度调用 VirtualAllocEx，再用 WriteProcessMemory 把路径写入目标地址空间，并通过 ReadProcessMemory 做一次写入验证。
-在 64 位分支中，由于 64 位 Windows 的 kernel32.dll 在系统范围内按相同基址加载，远程线程入口可以直接使用本进程解析到的 LoadLibraryW 地址，参数是目标进程中的路径地址。在 32 位分支中，代码额外获取目标进程中的函数地址，构造一段调用 LoadLibraryW 的 x86 shellcode，分配可执行内存后再通过 ZwCreateThreadEx 执行。两条分支的实现细节不同，但从防御侧看都形成了相同的高风险序列：跨进程分配、跨进程写入、跨进程线程创建。
-这也是行为检测比只匹配某个 API 更有价值的地方：单独调用 VirtualAllocEx 可能有正常用途，但它与后续写入和远程线程创建在短时间内连续出现时，语义明显发生变化。
-4. SnowWall 日志中的行为链日志时间集中在 06:52:20 至 06:52:21，关键记录如下：
-4.1 第一步：跨进程分配导致污点升级首先，NtAllocateVirtualMemory 被记录为规则评估事件，随后 SnowWall 输出 CrossAlloc 告警，原因是“污点等级升级为 1”，可疑度分数为 15，并标记为永久污染。
-这一步并没有立即给出最终阻断结论，但它为后续行为建立了上下文状态。也就是说，SnowWall 并非把每一次系统调用都孤立处理，而是为进程累积行为标签。
-4.2 第二步：向 CalculatorApp.exe 写入内存紧接着的 NtWriteVirtualMemory 事件显示：
-
-发起 PID：7108；
-目标 PID：4236；
-目标映像：CalculatorApp.exe；
-CrossProcess=1；
-发起程序未签名，且没有可信祖先进程标记。
-
-该条记录中的 rule_action=1 和 reason=RULE_ALLOW 表示这一条规则评估本身没有阻断，不能理解成整个注入流程已经被 SnowWall 放行。它只是行为链中的中间事件。
-4.3 第三步：远程线程创建触发阈值随后到达 NtCreateThreadEx——用户态调用 ZwCreateThreadEx 最终进入的正是这个内核系统服务，因此日志记录的是 NtCreateThreadEx。日志明确标出 CrossThreadCreate，匹配规则“远程线程注入链”，可疑度分数升至 82.91，并出现 behavior_hit=1、reason=BEHAVIOR_THRESHOLD。
-之后 SnowWall 输出：
-行为累积判定恶意: PID=7108 LastTag=CrossThreadCreateevent=DECISION ... action=BLOCK reason=BEHAVIOR_THRESHOLD
-
-因此，本次实验的完整判定是：前面的单条规则评估允许记录继续进入决策流程；当跨进程分配、写入和远程线程创建形成可疑序列后，行为累计分数达到阈值，SnowWall 最终执行 BLOCK。
-5. 截图与日志的相互印证5.1 SnowWall 开启：注入被阻断
-截图中可以看到 SnowSword 的目标进程列表、Windows 计算器窗口和 SnowWall 窗口，同时弹出“注入失败”的提示。它与日志最后的 action=BLOCK 相互印证：测试程序观察到失败，SnowWall 侧则给出了行为阈值阻断记录。
-5.2 SnowWall 关闭：作为对照的成功提示
-关闭 SnowWall 后，界面弹出“注入成功”的提示。
-6. 结果分析：为什么是“行为链”而不是单点告警本次日志可以整理成一条简化链路：
-未签名 SnowSword.exe        │        ├─ NtAllocateVirtualMemory ── CrossAlloc，污点等级 1，分数 15        │        ├─ NtWriteVirtualMemory ───── CrossProcess=1，写入 PID 4236        │        └─ NtCreateThreadEx ───────── CrossThreadCreate，分数 82.91                                      ↓                              BEHAVIOR_THRESHOLD                                      ↓                                     BLOCK
-
-其中有三个值得注意的设计点：
-
-状态累积：第一次分配操作先建立污点，后续事件可以继承上下文；
-目标关联：日志不仅记录 API，还记录目标 PID、目标映像和跨进程标志；
-分级决策：中间事件可以先记录或允许，最终由行为阈值统一决定是否阻断。
-
-这种策略比“看到 OpenProcess 就直接拦截”更适合降低误报，也比只等待 DLL 加载完成再处理更及时。
-7. 工程观察与防御建议从测试代码和日志可以得到几项工程上的观察：
-
-PROCESS_ALL_ACCESS 权限过宽，防御产品可将句柄权限、调用者身份和目标进程保护级别纳入风险评分；
-VirtualAllocEx 与 WriteProcessMemory 的组合比单独的内存分配更值得关注；
-NtCreateThreadEx 是行为链中的关键收敛点，但检测不应只依赖函数名，还要核对入口地址、目标进程和前序事件；
-32 位分支需要额外的可执行内存和 shellcode，64 位分支则直接将 LoadLibraryW 作为线程入口，跨架构差异可以作为日志字段而不是简单的放行条件；
-测试程序在清理路径中关闭句柄，但还应确保远程内存和 shellcode 在所有失败分支都得到释放，避免实验代码自身引入泄漏或不稳定因素。
-
-对防御侧而言，较稳妥的策略是保留原始事件、建立短时间窗口内的行为关联，并把签名、路径、父子进程关系和目标映像作为辅助证据。最终动作可以按风险等级分为记录、告警、挂起或阻断，同时为调试工具和受信任软件保留明确的审计例外。
-8. 当前局限与证据边界本次实验仍有以下限制：
-
-只有一组目标进程和一次主要日志片段，尚未进行多次重复统计；
-未覆盖签名的合法调试器、不同完整性级别和受保护进程；
-未分别验证 32 位目标进程分支与 64 位目标进程分支的全部路径；
-截图中的“注入成功”来自测试程序提示，尚未用独立工具确认 DLL 模块、入口执行和线程退出状态；
-当前日志没有展示完整规则配置、阈值定义和所有前置事件，因此不能据此推断 SnowWall 在其他版本或其他策略下必然给出相同结果。
-
-换句话说，日志能够证明本次运行中 SnowWall 观察到了这些 API 事件，并在该策略下输出 BLOCK；截图能够证明两种开关状态下界面现象不同。至于检测覆盖率、误报率和跨版本稳定性，还需要更系统的实验设计。
-9. 后续实验计划后续准备建立一个小型复现实验矩阵，至少保留以下字段：
-
-SnowWall 版本、规则版本和 Windows 版本；
-发起进程签名、路径、完整性级别与父进程；
-目标进程架构、保护属性和 PID；
-每个 API 事件的时间戳、目标和规则动作；
-最终动作、测试程序返回值和独立验证结果；
-正常调试场景与注入测试场景的重复次数。
-
-在此基础上，再比较只调用单个 API、缺少前序事件以及完整行为链时的分数变化，才能更准确地评估 SnowWall 的阈值设计和误报边界。
-总结这次实验展示了 SnowWall 如何从 NtAllocateVirtualMemory、NtWriteVirtualMemory 到 NtCreateThreadEx 逐步积累上下文，并将跨进程内存操作与远程线程创建关联为“远程线程注入链”。日志中的 CrossAlloc、CrossThreadCreate、BEHAVIOR_THRESHOLD 和最终 BLOCK，与 SnowWall 开启时的失败提示形成了较完整的证据链；关闭 SnowWall 后的成功提示则提供了直观对照。
-这个结果说明，针对高风险进程行为，按序列关联和分级决策比单点 API 拦截更有解释力。但它仍然是一次受控环境下的功能验证，不能替代多版本、多样本和正常软件基线测试。
-参考
-Microsoft Learn：OpenProcess、VirtualAllocEx、WriteProcessMemory、NtCreateThreadEx
-Windows Internals, 7th Edition
-本系列前篇：日报_SnowSword隐藏驱动检测实测、SnowSword-隐藏驱动检测原理与工程实现
-SnowSword 项目地址：https://github.com/user-lzy/SnowSword
-
-]]></content>
-      <categories>
-        <category>SnowSword Development</category>
-      </categories>
-      <tags>
+        <tag>Process</tag>
+        <tag>Windows Kernel</tag>
         <tag>SnowSword</tag>
         <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
-        <tag>进程行为检测</tag>
-        <tag>安全检测</tag>
-        <tag>SnowWall</tag>
       </tags>
   </entry>
   <entry>
@@ -893,10 +342,745 @@ SnowSword 项目地址：https://github.com/user-lzy/SnowSword
         <category>SnowSword Development</category>
       </categories>
       <tags>
+        <tag>Anti-Rootkit</tag>
+        <tag>Windows Kernel</tag>
         <tag>SnowSword</tag>
         <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
+        <tag>驱动检测</tag>
+        <tag>对象管理器</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>[MoeCTF 2021] PEPEPE —— 利用 PE 文件头恢复 XOR 密钥</title>
+    <url>/2026/08/01/%E6%97%A5%E6%8A%A5_PEPEPE_%E5%B7%B2%E7%9F%A5%E6%98%8E%E6%96%87%E6%94%BB%E5%87%BB/</url>
+    <content><![CDATA[题目信息
+
+
+项目
+内容
+
+
+
+赛事
+MoeCTF 2021
+
+
+题目
+PEPEPE
+
+
+分值
+443 分
+
+
+类型
+Reverse &#x2F; PE 文件还原
+
+
+考点
+已知明文攻击、XOR 流密码、PE 文件结构
+
+
+平台
+NSSCTF (https://www.nssctf.cn/problem/3391)
+
+
+题目描述
+题目提供了一个经过加密的 PE 文件和加密程序源码，需要分析加密算法，并恢复原始可执行文件。
+
+加密后的文件头部已无 MZ 标志，用 file 命令识别为纯 data。
+加密原理分析查看加密器 main.c 的核心逻辑：
+scanf(&quot;%s&quot;, input);                      // 输入 key...for (int i = 0; i &lt; file_len - 1; i++) &#123;    bank[i] = getc(f);    bank[i] = ~(bank[i] ^ input[i % input_len]);   // 逐字节 XOR 后取反&#125;
+
+加密公式：
+enc[i] = ~(org[i] ^ key[i % key_len])
+
+其中 key 是加密时输入的字符串，按 i % key_len 循环使用。这是一个循环 XOR 流密码（多了一步取反），强度完全取决于 key 的保密性。
+解题思路：已知明文攻击为什么能攻击？PE 文件有固定不变的结构——文件头。任何 PE 文件都以 MZ（0x4D 0x5A）开头，后面跟着结构固定的 DOS Header（大量字节是固定的 0x00）。这就是”已知明文”。
+
+前 64 字节的 DOS Header 中，大量字节是固定值或零值，非常适合作为已知明文。
+Key 恢复把加密公式变形：
+key[i] = ~enc[i] ^ org[i]
+
+用加密文件的前若干字节 + 已知的 PE 头部明文，恢复 key 的循环片段，检测周期得完整 key（其中 plain_head 取自原始文件 file_org 的前 64 字节，即标准 DOS Header）：
+def recover_key(data: bytes, plain_head: bytes) -&gt; bytes:    ks = bytes([(~data[i]) &amp; 0xFF ^ plain_head[i] for i in range(len(plain_head))])    for period in range(1, len(ks) // 2 + 1):        if all(ks[i] == ks[i % period] for i in range(len(ks))):            return ks[:period]    return ks
+
+运行结果：
+[+] recovered key = b&#x27;reverierwilllikeyou!&#x27; (len=20)
+
+key &#x3D; reverierwilllikeyou!（20 字节），呼应了 file_org.c 中的 “I think ReverierXu will like you!”。
+完整还原def decrypt(data: bytes, key: bytes) -&gt; bytes:    return bytes([(~b) &amp; 0xFF ^ key[i % len(key)] for i, b in enumerate(data)])
+
+验证结果：
+
+file_restored 被识别为 PE32 executable
+与原始文件对比，前 45559&#x2F;45560 字节完全一致
+
+
+最后一个字节差异：加密循环只处理 file_len - 1 个字节，末字节为未初始化内存（垃圾值），不影响 PE 完整性。
+
+运行验证$ cp file_restored file_restored.exe &amp;&amp; echo &quot;&quot; | ./file_restored.exe[root@Track.Sh]# Good job, I think ReverierXu will like you![root@Track.Sh]# moectf&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
+
+Flag
+注意：还原后的程序输出的是 moectf{} 格式，而 NSSCTF 平台要求使用 NSSCTF{} 格式提交（题目描述中已注明）。
+
+NSSCTF&#123;P3_Structur3_1s_r3ally_fUnnY!&#125;
+
+总结
+识别加密算法为循环 XOR（+取反）流密码
+利用 PE 文件头固定结构 进行已知明文攻击恢复 key
+检测 key 循环周期得到完整 key
+解密整个文件，还原出可运行的 PE，运行得到 flag
+固定格式的数据结构会降低简单流密码的安全性，因此在设计加密方案时不能仅依赖 XOR 与固定密钥。
+
+参考
+PE Format - Microsoft Learn
+NSSCTF - PEPEPE
+
+]]></content>
+      <categories>
+        <category>CTF</category>
+        <category>Reverse Engineering</category>
+      </categories>
+      <tags>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>CTF</tag>
+        <tag>Reverse</tag>
+        <tag>Windows</tag>
+        <tag>PE</tag>
+        <tag>密码学</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>恶意样本静态逆向实践：XOR 函数指针表与进程镂空注入</title>
+    <url>/2026/08/08/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
+    <content><![CDATA[今天尝试对一个 Windows 恶意样本进行静态逆向分析，主要学习 PE 文件结构、API 调用分析以及恶意程序常见行为模式。
+1. 分析过程今天尝试第一次完整分析一个 Windows 恶意样本。最开始通过 PE 信息确认样本结构，随后使用 IDA 跟踪关键函数。在分析过程中发现，样本并没有直接调用敏感 API，而是通过动态解析隐藏真实调用，这也是我第一次比较直观地接触到恶意程序对抗静态分析的方法。随后结合 IDA 对关键函数进行跟踪，发现程序并没有直接调用敏感 API，而是通过动态解析方式获取函数地址，增加静态分析难度。报告依据
+
+样本未直接调用敏感 API，而是在 .data 段存放异或加密的函数指针表（密钥 qword_408000 = 0x6BF72FD7E5809F41），运行时通过 qword_408000 ^ qword_408xxx 还原真实地址，如 0x40100D（WinMain_DecryptCall_Dispatcher）解密出 0x401634 后间接调用。
+示例：sub_401B45 中的 LoadLibraryW(&quot;ADVAPI32.dll&quot;)、OpenSCManagerW 等调用全部经此机制动态解析，规避静态分析。
+
+
+2. 关键发现2.1 进程注入分析分析过程中发现样本通过挂起创建进程、远程内存分配以及写入 payload 的方式实现代码注入，涉及 CreateProcessW、VirtualAllocEx、WriteProcessMemory 等 API。报告依据
+
+核心注入函数 sub_4046D1（0x4046D1）实现进程镂空：先 CreateProcessW(自身路径, ..., CREATE_SUSPENDED=0x8000000, ...) 挂起创建进程，再 VirtualAllocEx(hProc, 0, 72, 0x3000, PAGE_EXECUTE_READWRITE=4) 远程分配可执行内存，最后 WriteProcessMemory(hProc, addr, payload, 72, 0) 写入 payload。
+备用注入路径：sub_403851 使用 NtAllocateVirtualMemory &#x2F; NtWriteVirtualMemory（ntdll 原生 API）；sub_403A37 使用 PostQueuedCompletionStatus &#x2F; ZwSetIoCompletion 执行。
+
+
+这让我认识到，HIPS 不应该只关注单个 API 调用，而应该关注 API 调用组合形成的行为链，例如“创建挂起进程 + 远程写入 + 执行权限内存”。
+2.2 反静态调试分析样本存在 API 动态解析、字符串 XOR 加密以及跳板函数等混淆方式，使传统静态分析工具难以直接获得真实行为。报告依据
+
+API 动态解析：函数指针表存于 .data 段，运行时经 qword_408000 ^ qword_408xxx 异或还原（密钥 0x6BF72FD7E5809F41）。
+字符串 XOR 加密：宽字符 char = 低字节 ^ 高字节（如 0x408008 → ADVAPI32.dll、0x4083BC → bdservicehost.exe）；ANSI 单字节 XOR 尾字节（如 0x408082 → OpenSCManagerW）。
+跳板函数混淆：大量 jmp short 跳板（如 0x401B38 → sub_401B45、0x401FD3 → sub_401FE0、0x40284C → sub_402859），真实函数地址隐藏于异或表之后。
+
+
+这让我进一步理解为什么安全工具需要结合静态分析和运行时行为监控。
+2.3 对 HIPS 设计的启发此次分析也反向验证了之前设计 HIPS 行为规则的一些思路。例如恶意程序常通过多个正常 API 组合完成攻击，因此检测重点应该从单 API 判断转向行为链分析。CREATE_SUSPENDED + VirtualAllocEx + WriteProcessMemory + CreateRemoteThread
+3. 今日总结通过此次分析，我开始从攻击者视角理解 Windows 内部机制。之前开发 ARK&#x2F;HIPS 时更多关注“如何监控系统”，而逆向分析让我认识到“攻击者如何利用系统机制”同样重要。后续计划继续学习恶意代码分析，并将相关行为抽象为安全检测规则。
+]]></content>
+      <categories>
+        <category>Malware Analysis</category>
+      </categories>
+      <tags>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>Windows</tag>
+        <tag>Reserve</tag>
+        <tag>恶意样本</tag>
+        <tag>HIPS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>从 Windows 底层开发到网络安全：我的学习路线</title>
+    <url>/2026/07/30/from-system-development-to-cyber-security/</url>
+    <content><![CDATA[起点我最初接触计算机时，更多关注的是软件开发和系统底层原理。
+相比于单纯调用高级接口完成应用开发，我更喜欢了解程序运行背后的机制，例如：
+
+操作系统如何管理进程和线程
+程序如何加载和执行
+用户态与内核态之间如何交互
+硬件资源如何被系统抽象和管理
+
+随着学习深入，我逐渐发现，系统底层知识与网络安全之间存在非常紧密的联系。
+安全问题很多时候并不是单独存在于某个漏洞或工具中，而是建立在对操作系统、程序运行机制以及计算机体系结构的理解之上。
+因此，我开始尝试向网络安全方向扩展。
+
+当前学习方向目前我的学习重点主要集中在 Windows 平台安全相关方向。
+用户态安全研究用户态是大多数程序运行的环境，也是理解安全机制的重要入口。
+目前主要学习：
+
+Windows API 调用机制
+进程与线程管理
+PE 文件结构
+调试与程序分析
+系统信息采集
+
+这些内容帮助理解一个程序从启动到运行过程中发生了什么。
+
+Windows 内核与驱动开发Windows 内核提供了更加底层的系统控制能力，也是系统安全研究的重要方向。
+目前正在学习：
+
+Windows 驱动开发模型
+WDM 基础结构
+IRP 请求处理机制
+内核对象管理
+用户态与内核态通信
+
+通过驱动开发，可以进一步理解操作系统内部工作方式。
+
+安全工具开发在学习过程中，我也尝试开发一些辅助分析工具。
+目前正在开发的项目是 SnowSword，一个面向 Windows 平台的系统分析工具。
+项目主要用于：
+
+学习 Windows 系统内部结构
+实践系统信息采集
+验证安全分析相关技术
+
+通过实际开发工具，可以将理论知识转化为更加具体的实践经验。
+后续会单独记录项目开发过程中的设计思路和遇到的问题。
+
+后续学习计划未来希望继续完善自己的知识体系：
+Windows方向
+深入学习 Windows Internals
+研究系统安全机制
+学习恶意代码分析方法
+提升逆向分析能力
+
+网络安全基础
+网络协议
+常见漏洞原理
+Web安全基础
+密码学基础
+
+实践方向
+参与 CTF 或安全实验
+阅读优秀安全项目源码
+通过实际项目提升工程能力
+
+
+当前不足目前我的学习方向更加偏向 Windows 系统和底层开发，在网络方向还有很多需要补充的地方。
+例如：
+
+网络协议知识还需要系统学习
+Linux 安全生态接触较少
+安全分析经验仍需要通过更多实践积累
+
+因此，后续会逐步完善自己的知识结构，而不是局限于某一个方向。
+
+总结网络安全是一门综合性很强的领域。
+工具、框架和环境会不断变化，但对计算机基础原理的理解始终具有价值。
+希望通过博客记录自己的学习过程，将零散的知识整理下来，也方便未来回顾自己的成长路线。
+这也是开始记录网络安全学习的第一步。
+]]></content>
+      <categories>
+        <category>学习笔记</category>
+      </categories>
+      <tags>
+        <tag>Windows</tag>
+        <tag>网络安全</tag>
+        <tag>内核编程</tag>
+        <tag>学习记录</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>银狐木马虚拟机分析日报</title>
+    <url>/2026/08/28/yinhu-vm-analysis-diary/</url>
+    <content><![CDATA[1. 缘起：从 Edge 下载的“deepseek 电脑版”这次分析的样本来自 Edge 搜索下载的所谓“deepseek 电脑版”。把它放进隔离虚拟机后，表面上几乎没有任何动作：没有明显窗口、没有稳定的网络行为、连预期中的安装流程也没有出现。
+起初怀疑是样本损坏。后来结合静态分析的入口结构和系统重启后出现的异常，才怀疑它存在虚拟机环境检测，并进一步发现它释放了驱动级组件、修改了系统代码完整性策略。整个过程并不顺利，但留下的证据链比较完整，值得整理成一篇日报。
+2. 启动路径：一段可疑的运行时初始化样本的入口 start 非常短，只做了三件事：
+start  ├─ sub rsp, 28h  ├─ call sub_14001CE6C   ; 初始化运行时值  ├─ add rsp, 28h  └─ jmp sub_140001106   ; 进入真正的启动逻辑
+
+sub_14001CE6C 依次调用 GetSystemTimeAsFileTime、GetCurrentProcessId、GetCurrentThreadId、GetTickCount 和 QueryPerformanceCounter，把这些结果异或组合成一个运行时值，保存在 qword_14003D0A8，同时在 qword_14003D0B0 保存它的按位取反结果。
+单看这段代码，它更像安全 cookie &#x2F; 运行时值初始化，并不能单独证明存在虚拟机检测。真正引起怀疑的是后面的启动路径：
+sub_140001106  └─ call sub_14000113C      ├─ rax != 0 → 继续进入后续逻辑      └─ rax == 0 → jz short loc_14000112F，走退出路径
+
+在虚拟机中运行原始文件时，样本没有继续表现出明显行为。为了确认这个条件分支的含义，我在隔离环境中做了一次最小 patch 实验。
+3. 验证分支含义：一次最小 patch 实验方案 A 很直接：把 test rax, rax 后面的
+jz short loc_14000112F
+
+改成两个字节的 NOP NOP（90 90），让“检测失败”也不再跳向退出分支：
+call sub_14000113Ctest rax, raxnopnop                     ; jz 被抹掉，不再跳转退出分支jmp loc_1400014E0       ; 无条件进入真实逻辑
+
+最初的担心是样本存在内存完整性校验：进程启动后会校验 .text 段内存是否与磁盘原始内容一致，一旦发现被 patch 就判定篡改并退出。实际测试发现该样本没有 CRC 校验，修改后成功在虚拟机中继续运行。
+调试器中的观察也印证了这一点：在 install_q0_3_02+0x166a8 下断，单步进入 sub_14001CE6C 后 rax=00002b992ddfa233，qword_14003D0A8 与取反值均已初始化；随后跳入 sub_140001106，当 sub_14000113C 返回 rax=2 时，test rax, rax 后不会走退出分支。
+这个实验支持“启动条件判断 &#x2F; 环境检测”的假设，但必须保持克制：它只能证明该分支控制样本是否继续执行，不能单独断言样本只检测虚拟机。条件判断可能混合了调试器、系统版本、权限、网络或其他运行环境特征。
+4. 一次代价很高的失误确认启动分支后，我继续运行样本，却没有提前在关键位置设置足够的断点和行为监控。结果样本跑飞，感染了虚拟机并自动重启。
+这次失误的教训很直接：“能跑起来”并不等于“值得继续跑”。对驱动级样本，运行前必须准备好快照、行为监控和关键点断点，否则一次误操作就会污染整个实验环境，让后续分析从“分析样本”变成“处理事故”。
+5. 重启后的异常：驱动加载被代码完整性策略拦截重启之后，虚拟机中的 SnowSword 驱动加载出现异常，用户态调用 ZwLoadDriver 返回 0xC0E90002，但用户态功能尚可使用。同时，干掉了银狐驱动 ranchserv.jpg 的服务后，它还会被自动拉起。
+奇怪的是，挂上 WinDbg 后，同一个驱动又表现为可以加载。这个差异不能简单归结为“驱动文件时好时坏”。沿着内核加载路径下断点，经过 NtLoadDriver → IopLoadDriverImage → IopLoadDriver → MmLoadSystemImage 后，WinDbg 直接给出了关键提示：
+violated SI policy, will fail to load for scenario 0 !It is now allowed to load because BD is attached.
+
+这说明加载失败是由 SI（代码完整性）策略拦截导致的，而不是文件损坏或注册表缺失；BD 可以理解为内核调试器附加状态。调试器附加后允许加载，恰好解释了“普通启动失败、挂 WinDbg 成功”的表象，但它不能证明驱动签名有效，也不能证明系统策略已经恢复。
+6. CodeIntegrity 日志与 SiPolicy.p7b 时间戳在 Microsoft-Windows-CodeIntegrity/Operational 日志中，SnowSword.sys 对应了两类关键事件：
+
+事件 3077：代码完整性判断该驱动不满足 Authenticode 签名级别要求，或违反了当前代码完整性策略（Policy ID：{a244370e-44c9-4c06-b551-f6016e563076}）；
+事件 3004：系统无法验证映像完整性，提示找不到文件哈希，可能是签名错误、文件损坏或未知来源软件。
+
+日志时间覆盖 2026&#x2F;8&#x2F;27 16:29、17:23 和 2026&#x2F;8&#x2F;28 7:27、7:30，被加载对象均为 C:\Users\21607\Desktop\SnowSword.sys。
+查看 System32\CodeIntegrity 目录时，SiPolicy.p7b 的大小为 24,972 字节，LastWriteTime 为 2026/8/27 17:54:50，明显晚于同目录下其他代码完整性策略文件。结合样本已经具备修改文件、注册表和内核状态的高风险能力，可以提出一个较强的分析判断：系统代码完整性策略文件被样本篡改，或者至少被置于与干净系统明显不同的状态。不过，在没有同版本干净系统基线、文件哈希和签名链之前，仍应把它表述为“基于现有证据的高度疑似篡改”，而不是绝对结论。
+如果需要恢复，正确做法是从干净的同版本 Windows 10 机器导出出厂默认策略，替换虚拟机中被篡改的 SiPolicy.p7b。同时要注意 EFI 分区中仍保留 SiPolicy.p7b 的副本，需要一并修改，否则启动链可能继续使用被篡改的策略。
+7. 伪装驱动 ranchserv.jpg 的接口样本释放出的一个关键文件名是 ranchserv.jpg。从扩展名看它像图片，但实际被当作驱动文件加载。对这个驱动的派遣函数反编译后，可以看到它根据 IRP_MJ_DEVICE_CONTROL 的控制码分派不同功能，其中三个接口尤其值得关注：
+
+
+
+控制码
+行为
+潜在风险
+
+
+
+0x22E04C
+接收文件路径，打开文件后执行未公开操作
+可篡改文件内容、清零 PE 头或签名，导致目标驱动被内核判定为无效镜像
+
+
+0x22E048
+打开并操作注册表键
+可删除或修改安全工具的服务项，或修改驱动加载相关注册表配置
+
+
+0x22E014（材料标注）
+向某个内核结构中的函数指针数组写入任意值
+若该结构是文件系统过滤回调、映像加载通知或对象管理器回调，可挂钩或破坏驱动加载路径，使安全工具驱动加载被拦截或返回错误
+
+
+此外，0x22E044 附近还有版本查询分支，会向调用方返回 2.0.2 之类的字符串；其余分支则处理数据复制、结构初始化等操作。
+这个接口集合解释了后续现象：如果攻击者通过用户态客户端向该驱动传入 ARK&#x2F;HIPS 驱动文件路径，它可以清零 PE 头或篡改签名；如果传入注册表路径，它可以破坏安全工具的服务项；而内核结构写入能力则可以直接干预驱动加载路径，使安全工具在加载阶段就被拦截。
+8. 隐藏与对抗：安全模式下仍然看不见分析过程中还发现了一个隐蔽手法：在安全模式下，即使勾选“显示隐藏文件”，C:\ProgramData 的普通 dir 也看不到银狐的可执行文件，只能看到 Dbg、Huorong、Microsoft 等常规目录。
+使用 dir /a 后，才暴露出：
+C:\ProgramData&gt;dir /a2026/08/27  15:02    &lt;DIR&gt;          ePq5kdxo2026/08/27  15:02             2,949,632 Oaxs10zK.exe2026/08/27  15:02    &lt;DIR&gt;          VMHKT1Zo
+
+原因是被设置了“系统”+“隐藏”双重属性：只勾选“显示隐藏文件”不足以看到它们，必须同时勾选“显示系统文件”才会显形。
+处置时，删除文件后不能直接留空，否则服务或残留进程可能会把它重新创建。更稳妥的做法是：删除后用同名空目录占位，取消 SYSTEM、Everyone 和当前账户对该空目录的全部访问权限，并把目录所有者设为 SYSTEM，让恶意组件既无法重建文件，也无法通过目录权限写入新副本。
+9. 处置思路与证据保全样本已经执行过驱动级动作并触发自动重启后，继续在原虚拟机中“修修补补”并不是优先选择。更稳妥的顺序是：
+
+立即断开网络，保存虚拟磁盘、内存和事件日志副本；
+记录服务项、驱动文件路径、文件哈希、创建时间和签名验证结果；
+对 CodeIntegrity/Operational、System、Service Control Manager 和启动日志做时间线整理；
+使用可信来源重新建立同版本系统快照，再对比 System32\CodeIntegrity 及 EFI 分区中的策略文件；
+只有在证据已经保全后，才在副本上进行策略恢复和驱动加载验证。
+
+恢复策略时应使用与目标系统版本和补丁级别匹配的可信基线，并先确认恢复操作不会破坏取证证据。EFI 分区中的副本也需要纳入检查范围；只替换系统目录中的单个文件，不能自动证明启动链已经恢复。恢复后应重新启动并复核代码完整性事件、策略状态和驱动签名，而不是只看一次 ZwLoadDriver 返回值。
+10. IOC 与复核清单目前能确认或需要重点复核的线索包括：
+
+
+
+类型
+线索
+
+
+
+伪装驱动
+ranchserv.jpg，实际按驱动用途加载；对应服务被删除后会被自动拉起
+
+
+可疑样本
+从 Edge 搜索下载的所谓“deepseek 电脑版”安装包（调试符号名 install_q0_3_02）及其释放文件
+
+
+落地文件
+C:\ProgramData\Oaxs10zK.exe（2,949,632 字节）
+
+
+随机目录
+C:\ProgramData\ePq5kdxo、C:\ProgramData\VMHKT1Zo
+
+
+系统影响
+自动重启、ZwLoadDriver 返回 0xC0E90002、SnowSword 驱动加载异常、ranchserv.jpg 服务自动拉起
+
+
+完整性日志
+CodeIntegrity 事件 3004、3077（Policy ID：{a244370e-44c9-4c06-b551-f6016e563076}）
+
+
+关键策略文件
+System32\CodeIntegrity\SiPolicy.p7b（24,972 字节，2026&#x2F;8&#x2F;27 17:54:50）及 EFI 分区对应副本
+
+
+上表中的路径和文件名来自本次环境记录，不能直接当作通用 IOC。实际处置时还应补充 SHA-256、签名证书链、服务注册表路径、父子进程关系和网络连接记录，并在多个时间点重复采集，避免把残留文件误当成当前活动组件。
+11. 复盘：这次不会忘记的几件事
+在运行样本前先做快照，并准备第二份只读分析副本；
+先建立基线，再运行样本，至少记录驱动、服务、代码完整性策略和启动项；
+关键分支、服务创建、驱动加载和重启触发点必须提前布置观测手段；
+不把反编译器命名当成事实，所有高风险结论都要结合交叉引用、调用栈和系统日志；
+“挂调试器后可以加载”只说明调试上下文改变了系统行为，不表示样本或驱动可信；
+对驱动级样本，恢复快照通常比在已感染系统中继续操作更可靠；
+排查隐藏文件时，要同时勾选“显示系统文件”，不要只依赖“显示隐藏文件”。
+
+总结从目前证据看，这个银狐样本至少表现出三条值得警惕的线索：使用图片扩展名伪装驱动、通过高权限接口修改文件&#x2F;注册表&#x2F;内核状态，以及根据运行环境决定是否继续执行。随后出现的自动重启和 SnowSword 驱动加载失败，则把样本行为与系统代码完整性策略异常联系到了同一条证据链上：SiPolicy.p7b 的时间戳晚于其他策略文件，CodeIntegrity 日志持续报告 3077&#x2F;3004，WinDbg 明确提示 SI policy 拦截，而 ranchserv.jpg 恰好具备能够造成这些影响的文件、注册表和内核写入能力。
+安全分析仍然需要克制。一次虚拟机实验可以提出假设，却不能替代完整取证；一次日志告警可以指出策略冲突，却不能单凭时间戳证明所有文件都由同一个样本修改。只有把静态分析、运行时观测、代码完整性日志、可信基线和快照前后差异放在同一条证据链上，才能更接近可靠结论。
+下一步会在全新快照中补齐文件哈希、服务时间线和策略文件签名信息，并继续完善 SnowSword 对异常驱动和代码完整性事件的关联展示。
+]]></content>
+      <categories>
+        <category>Malware Analysis</category>
+      </categories>
+      <tags>
+        <tag>SnowSword</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>Windows</tag>
+        <tag>恶意样本</tag>
+        <tag>虚拟机检测</tag>
+        <tag>代码完整性</tag>
+        <tag>SiPolicy</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>SnowSword 隐藏驱动检测实测：摘链驱动的识别</title>
+    <url>/2026/08/21/%E6%97%A5%E6%8A%A5_SnowSword%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
+    <content><![CDATA[1. 引言上一篇文章介绍了 SnowSword 的隐藏驱动检测思路：同时观察模块列表、对象目录和内存中的 PE 特征，避免只依赖单一数据源。这次准备了一个测试驱动 TestHideDriver1.sys，尝试验证 SnowSword 能否在测试过程中标记出异常驱动。目前同时保留了 SnowSword 检测结果和 OpenArk 的枚举对比截图，本文只记录截图中能够确认的现象。
+2. 检测思路SnowSword 的驱动检测可以简单理解为三个视角：
+
+
+
+视角
+观察内容
+
+
+
+模块列表
+驱动名称、映像基址、映像大小和路径
+
+
+对象目录
+\\Driver、\\FileSystem 中的驱动对象
+
+
+内存特征
+内存中是否存在带有 PE 特征的可执行映像
+
+
+正常情况下，这些信息应该能够相互对应。如果某个驱动只在一个视角中出现，或者它的基址、大小和路径与其他信息对不上，就应该进入人工复核流程。本次实验的重点是观察 SnowSword 对测试驱动的标记结果，而不是证明 SnowSword 的全能性。
+3. 实验过程实验过程中使用自写 DriverLoader 加载测试驱动，并通过 DebugView 观察驱动输出。测试驱动加载后，在 SnowSword 的“内核模块”页面查看当前模块列表。
+从截图可以看到，列表中出现了：
+
+驱动名称：TestHideDriver1.sys；
+映像基址：0xFFFFF80267140000；
+映像大小：0x1000；
+路径位于用户桌面测试目录；
+该行以红色显示，与周围普通模块的显示效果不同。
+
+4. SnowSword 检测结果
+图中同时保留了测试过程中的几个窗口：
+
+SnowSword：右侧显示内核模块列表，TestHideDriver1.sys 被红色标记；
+DriverLoader：中间窗口用于加载测试驱动；
+DebugView：左侧可以看到测试驱动输出的 Driver is alive! 等调试信息。
+
+从现象上看，测试驱动已经成功加载并运行，SnowSword 也将它与普通内核模块区分显示。这说明当前检测模块至少能够获取到该测试驱动的模块信息，并根据自身规则给出异常标记。
+5. 与 OpenArk 的枚举结果对比
+
+
+
+工具
+截图中的结果
+
+
+
+SnowSword
+可以看到 TestHideDriver1.sys，并以红色标记；同时显示其基址、大小和桌面测试路径
+
+
+OpenArk
+当前驱动列表中未看到 TestHideDriver1.sys，只能看到 SnowSword.sys 和 OpenArkDrv64.sys 等模块
+
+
+6. 结果分析
+TestHideDriver1.sys 已经进入 SnowSword 的内核模块检测结果；
+SnowSword 能显示它的基址、大小和路径；
+SnowSword 对该测试驱动进行了红色高亮，说明它满足当前隐藏驱动的标记条件；
+OpenArk 的当前驱动列表中未显示该测试驱动，形成了与 SnowSword 的枚举差异；
+DriverLoader 和 DebugView 的窗口可以作为驱动加载和运行状态的辅助证据。
+
+7. 为什么不能只看一个列表驱动检测和进程隐藏检测一样，不能把单一枚举结果当成绝对事实。如果只看模块列表，攻击者可以尝试摘除模块链表记录；如果只看对象目录，也可能遇到未注册对象或结构变化；如果只扫 PE 特征，又可能把残留映像、缓存或版本差异误判为异常。
+更可靠的判断方式是把多个结果关联起来：
+驱动名称 / 基址 / 大小          |          +-- 是否存在于模块列表          +-- 是否能关联到 DRIVER_OBJECT          +-- 是否位于合法映像范围          +-- 是否有对应的运行时行为
+
+8. 当前局限本次实验仍然比较初步，主要局限包括：
+
+目前只有两张截图，没有干净系统和多次重复测试数据；
+尚未记录完整的扫描范围、耗时、CPU 占用和 IOCTL 次数；
+尚未对 \\Driver、\\FileSystem 和内存 PE 扫描结果进行逐项对照；
+尚未验证非分页池、清除 PE 头以及跨 Windows 版本等场景；
+红色高亮的具体触发规则还需要结合 SnowSword 源码进一步说明。
+
+9. 后续计划后续补充实验时，准备保留以下信息：
+
+测试前后的模块列表对比；
+测试驱动是否仍能在对象目录中找到；
+内存扫描命中的地址和模块归属结果；
+SnowSword 的原始调试日志；
+不同 Windows 版本下的重复测试结果。
+
+这样可以把“截图中看到驱动被标红”进一步扩展为完整的证据链，减少单一结果带来的误判。
+总结本次实验中，TestHideDriver1.sys 成功加载并运行，SnowSword 在内核模块列表中对它进行了红色标记，而 OpenArk 的当前驱动列表中没有显示该项。这个结果说明 SnowSword 与 OpenArk 对该测试状态的枚举结果存在差异，也说明多视角交叉检测能够发现单一工具不一定展示的对象，但这只是一次功能验证，而不是完整的隐藏驱动检测实验。
+对于 ARK 工具来说，发现异常只是第一步。只有把模块列表、对象目录、内存特征和运行时行为结合起来，并经过独立工具复核，才能逐步提高检测结果的可信度。
+参考
+Windows Internals, 7th Edition
+Microsoft Learn：IMAGE_NT_HEADERS、MmCopyMemory
+本系列前篇：日报_隐藏驱动检测_改进版、日报_内存暴力搜索DRIVER_OBJECT_改进版
+SnowSword 项目地址：https://github.com/user-lzy/SnowSword
+
+]]></content>
+      <categories>
+        <category>SnowSword Development</category>
+      </categories>
+      <tags>
         <tag>Anti-Rootkit</tag>
+        <tag>Windows Kernel</tag>
+        <tag>SnowSword</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>驱动检测</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>SnowWall 检测实测：从实验环境到结果复核</title>
+    <url>/2026/08/29/%E6%97%A5%E6%8A%A5_SnowWall%E6%A3%80%E6%B5%8B%E5%AE%9E%E6%B5%8B/</url>
+    <content><![CDATA[1. 引言前面的文章主要记录 SnowSword 在进程、驱动和内存视角上的检测实践。这次把测试重点放到 SnowWall 对恶意行为链的检测：使用 SnowSword 在授权的隔离实验机中对 Windows 计算器进程执行 DLL 远程注入，然后观察 SnowWall 如何记录、关联并阻断这一串操作。
+本文只讨论防御性检测和实验现象。远程线程注入也可能出现在调试、兼容性工具和安全软件中，因此“命中行为链”是需要进一步复核的高风险信号，而不是脱离上下文的恶意归因。
+2. 实验环境与对照条件实验对象是 Windows 11 中的 CalculatorApp.exe，日志记录的目标 PID 为 4236。发起方是桌面目录下未签名的 SnowSword.exe，PID 为 7108，父进程为 explorer.exe。
+实验采用两组对照：
+
+
+
+条件
+观察结果
+
+
+
+SnowWall 开启
+注入流程出现失败提示，日志记录跨进程内存操作和远程线程创建，并在行为阈值处阻断
+
+
+SnowWall 关闭
+注入流程出现成功提示，作为未启用防护时的对照现象
+
+
+两组截图的窗口布局基本一致，区别主要在 SnowWall 是否仍处于监控状态以及注入结果提示。这里的“成功&#x2F;失败”只表示本次测试程序报告的结果，最终判断仍以日志和目标进程状态为准。
+3. 注入代码的行为拆解RemoteInjectDll 的核心流程可以抽象为：
+OpenProcess(PROCESS_ALL_ACCESS)        ↓VirtualAllocEx  分配目标进程内存        ↓WriteProcessMemory  写入 DLL 路径        ↓ZwCreateThreadEx  在目标进程创建线程                  └─ 线程入口 = LoadLibraryW
+
+代码首先通过 OpenProcess(PROCESS_ALL_ACCESS, ...) 获取目标进程句柄。随后按 DLL 路径长度调用 VirtualAllocEx，再用 WriteProcessMemory 把路径写入目标地址空间，并通过 ReadProcessMemory 做一次写入验证。
+在 64 位分支中，由于 64 位 Windows 的 kernel32.dll 在系统范围内按相同基址加载，远程线程入口可以直接使用本进程解析到的 LoadLibraryW 地址，参数是目标进程中的路径地址。在 32 位分支中，代码额外获取目标进程中的函数地址，构造一段调用 LoadLibraryW 的 x86 shellcode，分配可执行内存后再通过 ZwCreateThreadEx 执行。两条分支的实现细节不同，但从防御侧看都形成了相同的高风险序列：跨进程分配、跨进程写入、跨进程线程创建。
+这也是行为检测比只匹配某个 API 更有价值的地方：单独调用 VirtualAllocEx 可能有正常用途，但它与后续写入和远程线程创建在短时间内连续出现时，语义明显发生变化。
+4. SnowWall 日志中的行为链日志时间集中在 06:52:20 至 06:52:21，关键记录如下：
+4.1 第一步：跨进程分配导致污点升级首先，NtAllocateVirtualMemory 被记录为规则评估事件，随后 SnowWall 输出 CrossAlloc 告警，原因是“污点等级升级为 1”，可疑度分数为 15，并标记为永久污染。
+这一步并没有立即给出最终阻断结论，但它为后续行为建立了上下文状态。也就是说，SnowWall 并非把每一次系统调用都孤立处理，而是为进程累积行为标签。
+4.2 第二步：向 CalculatorApp.exe 写入内存紧接着的 NtWriteVirtualMemory 事件显示：
+
+发起 PID：7108；
+目标 PID：4236；
+目标映像：CalculatorApp.exe；
+CrossProcess=1；
+发起程序未签名，且没有可信祖先进程标记。
+
+该条记录中的 rule_action=1 和 reason=RULE_ALLOW 表示这一条规则评估本身没有阻断，不能理解成整个注入流程已经被 SnowWall 放行。它只是行为链中的中间事件。
+4.3 第三步：远程线程创建触发阈值随后到达 NtCreateThreadEx——用户态调用 ZwCreateThreadEx 最终进入的正是这个内核系统服务，因此日志记录的是 NtCreateThreadEx。日志明确标出 CrossThreadCreate，匹配规则“远程线程注入链”，可疑度分数升至 82.91，并出现 behavior_hit=1、reason=BEHAVIOR_THRESHOLD。
+之后 SnowWall 输出：
+行为累积判定恶意: PID=7108 LastTag=CrossThreadCreateevent=DECISION ... action=BLOCK reason=BEHAVIOR_THRESHOLD
+
+因此，本次实验的完整判定是：前面的单条规则评估允许记录继续进入决策流程；当跨进程分配、写入和远程线程创建形成可疑序列后，行为累计分数达到阈值，SnowWall 最终执行 BLOCK。
+5. 截图与日志的相互印证5.1 SnowWall 开启：注入被阻断
+截图中可以看到 SnowSword 的目标进程列表、Windows 计算器窗口和 SnowWall 窗口，同时弹出“注入失败”的提示。它与日志最后的 action=BLOCK 相互印证：测试程序观察到失败，SnowWall 侧则给出了行为阈值阻断记录。
+5.2 SnowWall 关闭：作为对照的成功提示
+关闭 SnowWall 后，界面弹出“注入成功”的提示。
+6. 结果分析：为什么是“行为链”而不是单点告警本次日志可以整理成一条简化链路：
+未签名 SnowSword.exe        │        ├─ NtAllocateVirtualMemory ── CrossAlloc，污点等级 1，分数 15        │        ├─ NtWriteVirtualMemory ───── CrossProcess=1，写入 PID 4236        │        └─ NtCreateThreadEx ───────── CrossThreadCreate，分数 82.91                                      ↓                              BEHAVIOR_THRESHOLD                                      ↓                                     BLOCK
+
+其中有三个值得注意的设计点：
+
+状态累积：第一次分配操作先建立污点，后续事件可以继承上下文；
+目标关联：日志不仅记录 API，还记录目标 PID、目标映像和跨进程标志；
+分级决策：中间事件可以先记录或允许，最终由行为阈值统一决定是否阻断。
+
+这种策略比“看到 OpenProcess 就直接拦截”更适合降低误报，也比只等待 DLL 加载完成再处理更及时。
+7. 工程观察与防御建议从测试代码和日志可以得到几项工程上的观察：
+
+PROCESS_ALL_ACCESS 权限过宽，防御产品可将句柄权限、调用者身份和目标进程保护级别纳入风险评分；
+VirtualAllocEx 与 WriteProcessMemory 的组合比单独的内存分配更值得关注；
+NtCreateThreadEx 是行为链中的关键收敛点，但检测不应只依赖函数名，还要核对入口地址、目标进程和前序事件；
+32 位分支需要额外的可执行内存和 shellcode，64 位分支则直接将 LoadLibraryW 作为线程入口，跨架构差异可以作为日志字段而不是简单的放行条件；
+测试程序在清理路径中关闭句柄，但还应确保远程内存和 shellcode 在所有失败分支都得到释放，避免实验代码自身引入泄漏或不稳定因素。
+
+对防御侧而言，较稳妥的策略是保留原始事件、建立短时间窗口内的行为关联，并把签名、路径、父子进程关系和目标映像作为辅助证据。最终动作可以按风险等级分为记录、告警、挂起或阻断，同时为调试工具和受信任软件保留明确的审计例外。
+8. 当前局限与证据边界本次实验仍有以下限制：
+
+只有一组目标进程和一次主要日志片段，尚未进行多次重复统计；
+未覆盖签名的合法调试器、不同完整性级别和受保护进程；
+未分别验证 32 位目标进程分支与 64 位目标进程分支的全部路径；
+截图中的“注入成功”来自测试程序提示，尚未用独立工具确认 DLL 模块、入口执行和线程退出状态；
+当前日志没有展示完整规则配置、阈值定义和所有前置事件，因此不能据此推断 SnowWall 在其他版本或其他策略下必然给出相同结果。
+
+换句话说，日志能够证明本次运行中 SnowWall 观察到了这些 API 事件，并在该策略下输出 BLOCK；截图能够证明两种开关状态下界面现象不同。至于检测覆盖率、误报率和跨版本稳定性，还需要更系统的实验设计。
+9. 后续实验计划后续准备建立一个小型复现实验矩阵，至少保留以下字段：
+
+SnowWall 版本、规则版本和 Windows 版本；
+发起进程签名、路径、完整性级别与父进程；
+目标进程架构、保护属性和 PID；
+每个 API 事件的时间戳、目标和规则动作；
+最终动作、测试程序返回值和独立验证结果；
+正常调试场景与注入测试场景的重复次数。
+
+在此基础上，再比较只调用单个 API、缺少前序事件以及完整行为链时的分数变化，才能更准确地评估 SnowWall 的阈值设计和误报边界。
+总结这次实验展示了 SnowWall 如何从 NtAllocateVirtualMemory、NtWriteVirtualMemory 到 NtCreateThreadEx 逐步积累上下文，并将跨进程内存操作与远程线程创建关联为“远程线程注入链”。日志中的 CrossAlloc、CrossThreadCreate、BEHAVIOR_THRESHOLD 和最终 BLOCK，与 SnowWall 开启时的失败提示形成了较完整的证据链；关闭 SnowWall 后的成功提示则提供了直观对照。
+这个结果说明，针对高风险进程行为，按序列关联和分级决策比单点 API 拦截更有解释力。但它仍然是一次受控环境下的功能验证，不能替代多版本、多样本和正常软件基线测试。
+参考
+Microsoft Learn：OpenProcess、VirtualAllocEx、WriteProcessMemory、NtCreateThreadEx
+Windows Internals, 7th Edition
+本系列前篇：日报_SnowSword隐藏驱动检测实测、SnowSword-隐藏驱动检测原理与工程实现
+SnowSword 项目地址：https://github.com/user-lzy/SnowSword
+
+]]></content>
+      <categories>
+        <category>SnowSword Development</category>
+      </categories>
+      <tags>
+        <tag>Windows Kernel</tag>
+        <tag>SnowSword</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>进程行为检测</tag>
+        <tag>安全检测</tag>
+        <tag>SnowWall</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>隐藏驱动检测学习记录 —— 枚举 &#92;Driver 与 &#92;FileSystem 的多视角交叉验证</title>
+    <url>/2026/08/15/%E6%97%A5%E6%8A%A5_%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B_%E6%94%B9%E8%BF%9B%E7%89%88/</url>
+    <content><![CDATA[1. 缘起：ARK 为什么必须查隐藏驱动之前几篇都在做进程隐藏检测（PID 暴力扫描、PspCidTable 遍历），核心哲学是多视角交叉验证——Windows 里没有绝对可信的单一视角，攻击者篡改一个数据源容易，同时篡改多个独立数据源成本急剧上升。
+同样的道理完全适用于驱动。恶意驱动（Rootkit 的加载器、内核后门）想隐藏自己，最常见的手段是摘链 PsLoadedModuleList——这是 Windows 内核维护的已加载模块双向链表，摘链后普通工具（任务管理器、driverquery、甚至 NtQuerySystemInformation(SystemModuleInformation)）就看不到它了。
+但问题来了：驱动真的”消失”了吗？没有。只要它注册了 DRIVER_OBJECT，它就在对象管理器的命名空间里留下了痕迹。这就是本篇文章要用的第二个视角。
+
+核心思路：检测进程时可以同时看句柄表、PspCidTable、模块链表；检测驱动，同样可以同时看「模块加载器视角」和「对象管理器视角」。
+
+2. 驱动在内核里的两种”存在形式”一个正常加载的驱动，会在内核里同时留下两种记录：
+视角 1：模块加载器（PsLoadedModuleList）
+
+NtQuerySystemInformation(SystemModuleInformation) 返回的模块列表就来自这张链表；
+SnowSword 里 GetKernelModuleList 已经用它枚举驱动（路径 + 基址 + 大小）；
+攻击者摘链 → 这个视角就看不到了。
+
+视角 2：对象管理器命名空间（\Driver、\FileSystem）
+
+驱动加载时会在对象管理器根目录下注册一个 DRIVER_OBJECT，名字通常是 \Driver\驱动名；
+文件系统驱动注册在 \FileSystem，文件系统过滤驱动在 \FileSystem\Filters；
+这套命名空间由对象管理器独立维护，与 PsLoadedModuleList 是两套互不相干的机制。
+
+攻击者如果只摘链模块链表，对象管理器目录里的 DRIVER_OBJECT 依然在——这就是检出点。
+3. 视角 1 回顾：模块列表枚举（已有实现）SnowSword 里已有实现，核心是两段式调用：
+&#x27; 第一遍：查询需要的缓冲区大小st = ZwQuerySystemInformation(SystemModuleInformation, buffer, bufferSize, @bufferSize)If (st = STATUS_INFO_LENGTH_MISMATCH) Then buffer = Reallocate(buffer, bufferSize)&#x27; 第二遍：取实际数据st = ZwQuerySystemInformation(SystemModuleInformation, buffer, bufferSize, NULL)
+
+拿到 SYSTEM_MODULE_INFORMATION 后遍历 Modules(i)，用 ImageName 取驱动路径、路径最后一段作为驱动名。
+4. 视角 2：枚举 \Driver 与 \FileSystem这是本篇文章的新内容。对象管理器命名空间像文件系统一样组织目录，核心思路分三步：
+4.1 打开目录对象用 ZwOpenDirectoryObject 打开 \Driver 或 \FileSystem 目录，拿到句柄后再用 ObReferenceObjectByHandle 转成内核态的 OBJECT_DIRECTORY* 结构指针，之后关闭句柄保留对象引用——后续操作都基于结构指针，不走句柄。
+4.2 遍历哈希桶（核心逻辑）OBJECT_DIRECTORY 内部用 37 个 HashBuckets 哈希桶组织目录项，每个桶是一条 ChainLink 链表。遍历所有桶 &#x3D; 枚举目录下所有对象。这是比 ZwQueryDirectoryObject 更底层的做法（公开接口只能拿名字，直接读结构能拿到对象指针）。
+关键遍历逻辑：
+// ⚠️ 以下为核心逻辑示意，非完整可编译代码// 实际实现需自行补全错误处理、引用计数、结构体验证for (int i = 0; i &lt; BUCKET_COUNT; i++) &#123;  // BUCKET_COUNT 需验证，通常为 37    for (entry = DirObj-&gt;HashBuckets[i];          entry;          entry = entry-&gt;ChainLink) &#123;        // 1. 增加引用计数，防止遍历期间对象被释放        ObReferenceObject(entry-&gt;Object);        // 2. 判断是否为 DRIVER_OBJECT        if (ObGetObjectType(entry-&gt;Object) == *IoDriverObjectType) &#123;            PDRIVER_OBJECT drv = (PDRIVER_OBJECT)entry-&gt;Object;            // 3. 通过 DriverSection-&gt;DllBase 获取模块基址            //    这是与视角1（模块列表）交叉验证的关键纽带            PLDR_DATA_TABLE_ENTRY ldr = drv-&gt;DriverSection;            if (ldr) &#123;                PVOID base = ldr-&gt;DllBase;  // ← 与 SystemModuleInformation 的基址比对                // 收集 base，后续与模块列表做差集分析            &#125;        &#125;        // 4. 释放引用计数（匹配对象除外，由上层管理生命周期）        ObDereferenceObject(entry-&gt;Object);    &#125;&#125;
+
+
+为什么是 37 个桶？ 37 是质数，哈希取模时分布更均匀。但这个数字未文档化，不同 Windows 版本可能变化（Win7 确认是 37，Win10&#x2F;11 需自行验证）。硬编码此值在跨版本工具中存在兼容性风险，建议通过符号解析或特征扫描动态获取。
+
+4.3 引用计数纪律（最容易蓝屏的地方）遍历过程中每个对象都必须 ObReferenceObject &#x2F; ObDereferenceObject 配对，这是这段代码最容易出错的地方：
+
+
+
+操作
+后果
+
+
+
+漏释放（非匹配对象未 Dereference）
+对象永远无法回收，内存泄漏
+
+
+多释放
+直接 BSOD
+
+
+匹配对象未转交引用给上层
+对象可能被提前释放，后续访问蓝屏
+
+
+状态流转：
+ObReferenceObject (引用+1)    ↓判断对象类型    ├─ 是 DRIVER_OBJECT 且匹配目标 → 保留引用，返回给调用者    └─ 其他情况 → ObDereferenceObject（引用恢复）
+
+匹配对象把引用转交给调用者后，调用者用完必须 ObDereferenceObject，否则同样泄漏。
+4.4 类型判断与基址关联
+用 ObGetObjectType() == *IoDriverObjectType 判断驱动对象，走导出 API 而非手动访问对象头，避免踩到无效对象头。
+drvObj-&gt;DriverSection（LDR_DATA_TABLE_ENTRY）的 DllBase 与模块列表的基址比对——这一步把「对象管理器视角」和「模块加载器视角」用基址串了起来，正是交叉验证的基础。
+注意：不是每个 DRIVER_OBJECT 都有有效的 LDR_DATA_TABLE_ENTRY（DriverSection 可能为 NULL），访问前必须判空。
+
+5. 交叉验证：两个视角的差集把两个视角的结果并排对比：
+
+
+
+数据源
+枚举方式
+攻击者篡改方式
+
+
+
+模块列表 A
+SystemModuleInformation（源自 PsLoadedModuleList）
+摘链模块链表
+
+
+对象目录 B
+遍历 OBJECT_DIRECTORY 哈希桶，枚举 \Driver + \FileSystem
+删除&#x2F;不注册 DRIVER_OBJECT
+
+
+两个视角的数据源不同，但都能拿到驱动基址：视角 A 直接给 dwBase，视角 B 通过 DriverSection-&gt;DllBase 取。所以交叉验证可以按基址对齐：
+
+遍历 \Driver、\FileSystem 目录，收集所有 DRIVER_OBJECT 的基址；
+对每个基址与模块列表 A 的基址集合比对；
+基址不在 A 中 &#x3D; 模块列表里没有这个驱动 &#x3D; 疑似摘链隐藏驱动——模块链表上看不到，但对象管理器里还留着 DRIVER_OBJECT，这就是检出点。
+
+反过来，A 有而 B 无的条目要小心：不是所有模块都会注册 DRIVER_OBJECT（早期 boot 加载的驱动、未创建设备对象的驱动），直接报”隐藏”会误报，需要先收集正常基线再判断。
+5.1 攻击者视角：如何绕过？
+如果我是攻击者，怎么让这套检测失效？
+
+
+双杀：摘链 PsLoadedModuleList + 同时从 \Driver 目录删除对象（需调用 ObMakeTemporaryObject 或类似操作，但会留下新的痕迹）；
+不注册 DRIVER_OBJECT：纯内存执行，两个视角都看不到 → 引出第九篇；
+伪造 DriverSection-&gt;DllBase：指向一个合法模块的基址，交叉比对时被”吸附”到合法基址，产生假阴性。
+
+检测的本质不是”找到所有坏人”，而是提高攻击者的隐藏成本。
+6. 盲区与第九篇伏笔：内存暴力搜索 DRIVER_OBJECT如果攻击者连 \Driver 对象都不注册，两个视角都会落空。但 DRIVER_OBJECT 是真实存在于内核内存里的结构，它有一个特征——结构体首部的 Type 字段（IO_TYPE_DRIVER）。所以理论上可以扫描内核内存区域，按特征寻找所有 DRIVER_OBJECT：
+暴力扫描内核内存  ↓ 校验结构特征（Type 魔数、DriverName 有效性、MajorFunction 指针合法性）  ↓ 找到未被任何链表/目录登记的 DRIVER_OBJECT纯内存隐藏驱动
+
+7. 遇到的问题与注意事项
+OBJECT_DIRECTORY 是未导出结构：HashBuckets 的桶数（37 个）和 OBJECT_DIRECTORY_ENTRY 的布局依赖系统版本，需要在自己目标系统上验证结构布局。验证方法：
+
+Windbg: dt nt!_OBJECT_DIRECTORY
+对比不同 Windows 版本的 _OBJECT_DIRECTORY 定义
+特征扫描：Directory 对象包含固定数量的指针数组模式
+
+
+引用计数准则：遍历中每个对象都要 ObReferenceObject &#x2F; ObDereferenceObject 配对——漏释放会引用泄漏（对象永远无法回收），多释放会直接崩溃。匹配对象把引用转交给调用者后，调用者用完必须 ObDereferenceObject。
+
+DriverSection 判空：不是每个 DRIVER_OBJECT 都有有效的 LDR_DATA_TABLE_ENTRY（DriverSection 可能为 NULL），访问前必须判空，否则蓝屏。
+
+误报处理：A 有 B 无 的条目需要基线（boot 驱动、无设备对象驱动都正常），不能直接当隐藏报。
+
+\FileSystem\Filters 子目录：MiniFilter 的驱动对象在子目录里，漏枚举会导致视野不全。
+
+BUCKET_COUNT 硬编码风险：如前所述，37 这个数字未文档化，跨版本使用需验证。
+
+
+参考
+Windows Internals, 7th Edition（对象管理器 &#x2F; 驱动对象 &#x2F; PsLoadedModuleList 章节）
+Microsoft Learn：ZwOpenDirectoryObject &#x2F; ObReferenceObjectByHandle &#x2F; ObGetObjectType &#x2F; IoDriverObjectType
+本系列前篇：SnowSword–进程隐藏检测实现、PspCidTable 进程枚举学习记录
+
+]]></content>
+      <categories>
+        <category>Windows Kernel</category>
+      </categories>
+      <tags>
+        <tag>Anti-Rootkit</tag>
+        <tag>Windows Kernel</tag>
+        <tag>SnowSword</tag>
+        <tag>网络安全协会暑期培训</tag>
         <tag>驱动检测</tag>
         <tag>对象管理器</tag>
       </tags>
@@ -1105,278 +1289,174 @@ Microsoft Learn： IMAGE_NT_HEADERS
         <category>Windows Kernel</category>
       </categories>
       <tags>
+        <tag>Anti-Rootkit</tag>
+        <tag>Windows Kernel</tag>
         <tag>SnowSword</tag>
         <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
-        <tag>Anti-Rootkit</tag>
         <tag>驱动检测</tag>
         <tag>内存特征扫描</tag>
       </tags>
   </entry>
   <entry>
-    <title>隐藏驱动检测学习记录 —— 枚举 &#92;Driver 与 &#92;FileSystem 的多视角交叉验证</title>
-    <url>/2026/08/15/%E6%97%A5%E6%8A%A5_%E9%9A%90%E8%97%8F%E9%A9%B1%E5%8A%A8%E6%A3%80%E6%B5%8B_%E6%94%B9%E8%BF%9B%E7%89%88/</url>
-    <content><![CDATA[1. 缘起：ARK 为什么必须查隐藏驱动之前几篇都在做进程隐藏检测（PID 暴力扫描、PspCidTable 遍历），核心哲学是多视角交叉验证——Windows 里没有绝对可信的单一视角，攻击者篡改一个数据源容易，同时篡改多个独立数据源成本急剧上升。
-同样的道理完全适用于驱动。恶意驱动（Rootkit 的加载器、内核后门）想隐藏自己，最常见的手段是摘链 PsLoadedModuleList——这是 Windows 内核维护的已加载模块双向链表，摘链后普通工具（任务管理器、driverquery、甚至 NtQuerySystemInformation(SystemModuleInformation)）就看不到它了。
-但问题来了：驱动真的”消失”了吗？没有。只要它注册了 DRIVER_OBJECT，它就在对象管理器的命名空间里留下了痕迹。这就是本篇文章要用的第二个视角。
+    <title>PyInstaller 加固样本逆向：从 CArchive 修复到 pyc 反编译</title>
+    <url>/2026/08/23/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AF%87%E6%97%A5%E6%8A%A5_PyInstaller%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
+    <content><![CDATA[1. 缘起：为什么值得单独写一篇 PyInstaller 样本分析在 Windows 恶意样本里，Python 打包程序已经不算少见。攻击者把 Python 写的 loader、窃密器、键盘记录器用 PyInstaller 打成 exe，既能跨机器运行，又能把真正的逻辑藏进字节码里。对恶意样本分析师来说，把 PyInstaller 里的 Python 字节码完整提取出来往往是分析的第一步。
+这次遇到的样本表面上是一个普通 Windows 程序：运行后提示 Enter input:，输入错误就输出 Wrong input。但用 IDA 打开后，入口逻辑并不是常见的 C&#x2F;C++ 业务代码，而是 PyInstaller bootloader 的特征——它真正的逻辑在附加数据段里。更值得注意的是，这个样本对通用提取工具做了两处明显的对抗：
 
-核心思路：检测进程时可以同时看句柄表、PspCidTable、模块链表；检测驱动，同样可以同时看「模块加载器视角」和「对象管理器视角」。
+PyInstaller 的 cookie 魔数被改写，导致 pyinstxtractor 直接报 “Missing cookie”；
+CArchive 里的 Python 模块数据被自定义加密，即使绕过 cookie 检查，解压也会失败。
 
-2. 驱动在内核里的两种”存在形式”一个正常加载的驱动，会在内核里同时留下两种记录：
-视角 1：模块加载器（PsLoadedModuleList）
+这两处对抗单独看都不难，但组合起来正好可以整理出一条可复用的 PyInstaller 恶意样本静态提取方法链。
+2. 先建立整体认知：PyInstaller 程序长什么样PyInstaller 打包出来的 Windows 程序可以粗略分成两层：
+┌─────────────────────────────────────────────┐│ PE 启动器（bootloader）                      ││   原生 C/C++ 代码，负责解包、加载 Python     │├─────────────────────────────────────────────┤│ overlay：追加在 PE 文件尾部的 CArchive       ││   ├── TOC：条目名称 / 偏移 / 大小 / 类型     ││   ├── 条目类型：                            ││   │   s/m  → Python 字节码（模块/入口脚本）  ││   │   z    → PYZ.pyz（压缩的 Python 模块库） ││   │   b    → DLL / PYD / 数据文件            ││   └── cookie：位于文件尾部，用于定位 CArchive│└─────────────────────────────────────────────┘
 
-NtQuerySystemInformation(SystemModuleInformation) 返回的模块列表就来自这张链表；
-SnowSword 里 GetKernelModuleList 已经用它枚举驱动（路径 + 基址 + 大小）；
-攻击者摘链 → 这个视角就看不到了。
+关键点有两个：
 
-视角 2：对象管理器命名空间（\Driver、\FileSystem）
+cookie：一小段固定魔数，通常长这样：MEI\x0c\x0b\x0a\x0b\x0e。bootloader 从文件尾部往回搜索这段魔数，找到后解析后面的 CArchive 偏移和长度。
+CArchive 条目：s 类型是入口脚本（如 main.py），m 类型是被 import 的模块，z 类型是 PYZ。它们大多数情况下是 zlib 压缩后的 Python marshal 数据。
 
-驱动加载时会在对象管理器根目录下注册一个 DRIVER_OBJECT，名字通常是 \Driver\驱动名；
-文件系统驱动注册在 \FileSystem，文件系统过滤驱动在 \FileSystem\Filters；
-这套命名空间由对象管理器独立维护，与 PsLoadedModuleList 是两套互不相干的机制。
+通用提取器（如 pyinstxtractor）就是按这个结构工作的：先找 cookie，再读 TOC，再逐个解压条目。
+3. 对抗点一：cookie 魔数被改写用 pyinstxtractor 处理样本时，最先遇到的就是：
+[!] Error : Missing cookie, unsupported pyinstaller version or not a pyinstaller archive
 
-攻击者如果只摘链模块链表，对象管理器目录里的 DRIVER_OBJECT 依然在——这就是检出点。
-3. 视角 1 回顾：模块列表枚举（已有实现）SnowSword 里已有实现，核心是两段式调用：
-&#x27; 第一遍：查询需要的缓冲区大小st = ZwQuerySystemInformation(SystemModuleInformation, buffer, bufferSize, @bufferSize)If (st = STATUS_INFO_LENGTH_MISMATCH) Then buffer = Reallocate(buffer, bufferSize)&#x27; 第二遍：取实际数据st = ZwQuerySystemInformation(SystemModuleInformation, buffer, bufferSize, NULL)
+直接在文件里搜标准魔数 MEI\x0c\x0b\x0a\x0b\x0e，确实搜不到。但文件里存在大量 PyInstaller 特征字符串（pyi-python-flag、PyRun_SimpleStringFlags 等），说明它仍然是 PyInstaller 程序，只是 cookie 被改过。
+继续搜索后发现，文件尾部 cookie 位置的实际字节是：
+73 77 49 0c 0b 0a 0b 0e= swI\x0c\x0b\x0a\x0b\x0e
 
-拿到 SYSTEM_MODULE_INFORMATION 后遍历 Modules(i)，用 ImageName 取驱动路径、路径最后一段作为驱动名。
-4. 视角 2：枚举 \Driver 与 \FileSystem这是本篇文章的新内容。对象管理器命名空间像文件系统一样组织目录，核心思路分三步：
-4.1 打开目录对象用 ZwOpenDirectoryObject 打开 \Driver 或 \FileSystem 目录，拿到句柄后再用 ObReferenceObjectByHandle 转成内核态的 OBJECT_DIRECTORY* 结构指针，之后关闭句柄保留对象引用——后续操作都基于结构指针，不走句柄。
-4.2 遍历哈希桶（核心逻辑）OBJECT_DIRECTORY 内部用 37 个 HashBuckets 哈希桶组织目录项，每个桶是一条 ChainLink 链表。遍历所有桶 &#x3D; 枚举目录下所有对象。这是比 ZwQueryDirectoryObject 更底层的做法（公开接口只能拿名字，直接读结构能拿到对象指针）。
-关键遍历逻辑：
-// ⚠️ 以下为核心逻辑示意，非完整可编译代码// 实际实现需自行补全错误处理、引用计数、结构体验证for (int i = 0; i &lt; BUCKET_COUNT; i++) &#123;  // BUCKET_COUNT 需验证，通常为 37    for (entry = DirObj-&gt;HashBuckets[i];          entry;          entry = entry-&gt;ChainLink) &#123;        // 1. 增加引用计数，防止遍历期间对象被释放        ObReferenceObject(entry-&gt;Object);        // 2. 判断是否为 DRIVER_OBJECT        if (ObGetObjectType(entry-&gt;Object) == *IoDriverObjectType) &#123;            PDRIVER_OBJECT drv = (PDRIVER_OBJECT)entry-&gt;Object;            // 3. 通过 DriverSection-&gt;DllBase 获取模块基址            //    这是与视角1（模块列表）交叉验证的关键纽带            PLDR_DATA_TABLE_ENTRY ldr = drv-&gt;DriverSection;            if (ldr) &#123;                PVOID base = ldr-&gt;DllBase;  // ← 与 SystemModuleInformation 的基址比对                // 收集 base，后续与模块列表做差集分析            &#125;        &#125;        // 4. 释放引用计数（匹配对象除外，由上层管理生命周期）        ObDereferenceObject(entry-&gt;Object);    &#125;&#125;
+也就是说，作者把标准魔数里的 MEI 改成了 swI。
+如果只看工具报错，很容易卡在“工具不支持”上。正确的做法是回到 bootloader 本身：程序能运行，说明它运行时一定能找到某个魔数，去启动器里看它到底在找什么。
+在 IDA 里定位到 bootloader 的归档加载函数后，能看到它并不是直接比较一段明文魔数，而是通过常量加载、移位、加法等操作在运行时构造搜索模式。反汇编里类似这样的片段：
+mov rcx, cs:qword_140030E40mov [rsp+Buffer], rcxmov r8d, 8                ; 搜索长度 8 字节shr rcx, 18hadd cl, 0Dh               ; 修正第 4 个字节mov [rsp+Buffer+3], clcall sub_1400084F0        ; 从文件尾部反向搜索魔数
 
-
-为什么是 37 个桶？ 37 是质数，哈希取模时分布更均匀。但这个数字未文档化，不同 Windows 版本可能变化（Win7 确认是 37，Win10&#x2F;11 需自行验证）。硬编码此值在跨版本工具中存在兼容性风险，建议通过符号解析或特征扫描动态获取。
-
-4.3 引用计数纪律（最容易蓝屏的地方）遍历过程中每个对象都必须 ObReferenceObject &#x2F; ObDereferenceObject 配对，这是这段代码最容易出错的地方：
+顺着这个逻辑确认，bootloader 实际接受的 cookie 就是 swI\x0c\x0b\x0a\x0b\x0e。启动器里甚至还保留了另一个变体（swI\x0d...），用于外部 .pkg 归档的加载路径。
+修复方法：把文件尾部 cookie 的 swI 改回 MEI，字节数不变，不会影响任何偏移。修改后 pyinstxtractor 就能正常识别：
+data = bytearray(open(&#x27;sample.exe&#x27;, &#x27;rb&#x27;).read())idx = data.rfind(b&#x27;swI\x0c\x0b\x0a\x0b\x0e&#x27;)data[idx:idx+3] = b&#x27;MEI&#x27;open(&#x27;sample_patched.exe&#x27;, &#x27;wb&#x27;).write(data)
 
 
+方法要点：通用提取器是基于“标准结构”写的，遇到魔数被改时，不要急着放弃或猜，先去 bootloader 里确认它运行时使用的真实魔数。
 
-操作
-后果
+4. 对抗点二：Python 模块数据被自定义加密cookie 修好后再提取，pyinstxtractor 能解析出 58 个 CArchive 条目，但关键模块全部解压失败：
+[!] Error : Failed to decompress pyimod01_archive[!] Error : Failed to decompress pyimod02_importers[!] Error : Failed to decompress CreackMe&amp;&amp;FxxMe
 
+把 pyimod01_archive 的原始数据前几个字节打出来看：
+73 77 64 64 d2 70 f7 25 ...= swdd....（不是 zlib 头）
 
+正常的 zlib 流应该以 78 9c 或 78 da 开头，而这里以 swdd 开头。很明显，作者在压缩前对数据做了处理，并且给每个加密条目都加了 swdd 前缀。
+解密逻辑仍然藏在 bootloader 里。定位到负责解压条目的函数 sub_1400011F0，反编译后能看到一段非常直白的处理：
 
-漏释放（非匹配对象未 Dereference）
-对象永远无法回收，内存泄漏
+如果读到的数据以 swdd 开头，先去掉前 4 字节；
+对剩余数据逐字节 XOR 0xAA；
+把处理后的数据交给 inflate 解压。
 
+对应的 Python 验证脚本：
+import zlibraw = open(&#x27;pyimod01_archive.bin&#x27;, &#x27;rb&#x27;).read()assert raw[:4] == b&#x27;swdd&#x27;data = bytes(b ^ 0xAA for b in raw[4:])   # 去掉 swdd 前缀后整体 XOR 0xAAplain = zlib.decompress(data)             # 得到 marshal 代码对象print(len(plain), plain[:16].hex())
 
-多释放
-直接 BSOD
+第一次验证就成功解出 2999 字节，说明加密算法就是“前缀 + 固定单字节 XOR”，没有额外密钥或复杂状态。对于恶意样本分析来说这是好消息：固定 XOR 的混淆只能挡住不会看数据的工具，挡不住愿意往下跟一层的人。
+5. 字节码恢复与反编译解压出来的数据是 Python 3.8 的 marshal 代码对象（以 e3 00 00 00 开头），不是完整的 .pyc 文件。要反编译，需要补上 Python 3.8 的 pyc 头：
+55 0d 0d 0a 00 00 00 00 00 00 00 00 00 00 00 00
 
+补完头之后，用 uncompyle6 就能直接恢复主脚本源码。恢复出来的核心逻辑是一个自定义实现的 RC4 类加解密函数：
+def arc_cipher(data: bytes, key: bytes) -&gt; bytes:    # 自实现 RC4 加密/解密    ...    return bytes(out)key = b&#x27;NSSCTF&#x27;user_input = input(&quot;Enter input: &quot;).encode()encrypted = arc_cipher(user_input, key)if encrypted == target_bytes:    print(f&quot;Your are right, flag is NSSCTF&#123;&#123;&#123;user_input.decode()&#125;&#125;&#125;&quot;)else:    print(&quot;Wrong input&quot;)
 
-匹配对象未转交引用给上层
-对象可能被提前释放，后续访问蓝屏
+到这里，样本的完整行为已经清楚了：它读入一段输入，用固定 key 做自实现 RC4，和内置密文比较。由于 RC4 是对称算法，用同一函数处理密文就能还原出正确输入。
+验证时只需要跑一遍本地还原逻辑，确认“恢复出的输入能通过程序校验”即可。本文不展开具体输入值，因为重点不是这道题本身，而是这条提取链。
+6. 对恶意样本分析的启发6.1 通用提取器失效时，方法链比工具重要这次分析真正有价值的地方，不是“把 swI 改成 MEI”，而是面对失效时的思考顺序：
+识别打包器  → 理解标准结构（cookie / CArchive / PYZ / pyc）  → 工具报错时，回到 bootloader 确认真实约定  → 定位自定义处理逻辑（魔数构造、解密、解压）  → 手工恢复数据  → 补结构头，交给反编译器
 
+工具负责加速，但结构知识负责兜底。PyInstaller 的 cookie、TOC、条目类型、pyc 头这些都是公开且固定的，只要 bootloader 还在按这套结构运行，就能手工还原。
+6.2 静态分析的边界这个样本展示了静态分析的一个典型困境：字符串、魔数、数据头都可以被改写，甚至模块数据可以被整体加密。如果只依赖“搜字符串”和“跑通用提取器”，很容易得出错误结论。
+但静态分析仍然有价值：bootloader 是原生代码，它必须实现解密逻辑，才能让 Python 运行时加载模块。只要找到 bootloader 里 inflate 之前的处理代码，就能还原整个数据变换。混淆可以藏数据，但藏不住处理数据的代码。
+6.3 与 ARK &#x2F; SnowSword 检测思维的关联这个样本的对抗方式，和 Rootkit 隐藏自己的思路很像：
 
-状态流转：
-ObReferenceObject (引用+1)    ↓判断对象类型    ├─ 是 DRIVER_OBJECT 且匹配目标 → 保留引用，返回给调用者    └─ 其他情况 → ObDereferenceObject（引用恢复）
+恶意样本改掉 PyInstaller cookie 魔数 → 通用提取器失效；
+Rootkit 摘掉 ActiveProcessLinks &#x2F; 模块链表 → 通用枚举工具失效。
 
-匹配对象把引用转交给调用者后，调用者用完必须 ObDereferenceObject，否则同样泄漏。
-4.4 类型判断与基址关联
-用 ObGetObjectType() == *IoDriverObjectType 判断驱动对象，走导出 API 而非手动访问对象头，避免踩到无效对象头。
-drvObj-&gt;DriverSection（LDR_DATA_TABLE_ENTRY）的 DllBase 与模块列表的基址比对——这一步把「对象管理器视角」和「模块加载器视角」用基址串了起来，正是交叉验证的基础。
-注意：不是每个 DRIVER_OBJECT 都有有效的 LDR_DATA_TABLE_ENTRY（DriverSection 可能为 NULL），访问前必须判空。
+两者的共同点是：攻击者只需要让“单一数据源&#x2F;单一工具”失效，就能显著提高分析门槛。 这也解释了为什么 SnowSword 做检测时要坚持多视角交叉验证——模块列表、对象目录、内存特征、运行时行为互相印证，而不是把某一个列表当成绝对事实。逆向分析同理：不能因为一个提取器报错就判定“不是 PyInstaller”，也不能因为一个字符串匹配就认定样本行为。
+7. 遇到的问题与局限
+Python 版本不匹配：当前环境是 Python 3.11，样本是 Python 3.8，pyinstxtractor 对 PYZ 的自动提取会因 marshal 版本不匹配而跳过。主脚本在 CArchive 里不受影响，但 PYZ 内模块需要额外处理。
+方法依赖具体 bootloader 修改：本次的 swdd + XOR 0xAA 是针对这个样本的定制逻辑；换一个样本，前缀、密钥、算法位置都可能变化，不能直接套脚本。
+手工解析容易踩偏移坑：CArchive 的 TOC 条目是定长头 + 变长名字，解析时如果字段偏移算错，后面的条目会全部错位。写脚本时要先用已知 DLL 条目（能正常 zlib 解压）做自检。
+反编译质量依赖工具：uncompyle6 对 Python 3.8 支持尚可，但遇到复杂控制流仍可能失败；必要时需要结合字节码 dis 手工分析。
 
-5. 交叉验证：两个视角的差集把两个视角的结果并排对比：
+8. 总结与展望这次分析形成了一条可以复用的 PyInstaller 恶意样本静态提取流水线：
+PE 启动器识别  → cookie 修复  → CArchive 手工解析  → 定位 bootloader 自定义解密  → 恢复 Python 字节码  → 补 pyc 头 + 反编译
 
-
-
-数据源
-枚举方式
-攻击者篡改方式
-
-
-
-模块列表 A
-SystemModuleInformation（源自 PsLoadedModuleList）
-摘链模块链表
-
-
-对象目录 B
-遍历 OBJECT_DIRECTORY 哈希桶，枚举 \Driver + \FileSystem
-删除&#x2F;不注册 DRIVER_OBJECT
-
-
-两个视角的数据源不同，但都能拿到驱动基址：视角 A 直接给 dwBase，视角 B 通过 DriverSection-&gt;DllBase 取。所以交叉验证可以按基址对齐：
-
-遍历 \Driver、\FileSystem 目录，收集所有 DRIVER_OBJECT 的基址；
-对每个基址与模块列表 A 的基址集合比对；
-基址不在 A 中 &#x3D; 模块列表里没有这个驱动 &#x3D; 疑似摘链隐藏驱动——模块链表上看不到，但对象管理器里还留着 DRIVER_OBJECT，这就是检出点。
-
-反过来，A 有而 B 无的条目要小心：不是所有模块都会注册 DRIVER_OBJECT（早期 boot 加载的驱动、未创建设备对象的驱动），直接报”隐藏”会误报，需要先收集正常基线再判断。
-5.1 攻击者视角：如何绕过？
-如果我是攻击者，怎么让这套检测失效？
-
-
-双杀：摘链 PsLoadedModuleList + 同时从 \Driver 目录删除对象（需调用 ObMakeTemporaryObject 或类似操作，但会留下新的痕迹）；
-不注册 DRIVER_OBJECT：纯内存执行，两个视角都看不到 → 引出第九篇；
-伪造 DriverSection-&gt;DllBase：指向一个合法模块的基址，交叉比对时被”吸附”到合法基址，产生假阴性。
-
-检测的本质不是”找到所有坏人”，而是提高攻击者的隐藏成本。
-6. 盲区与第九篇伏笔：内存暴力搜索 DRIVER_OBJECT如果攻击者连 \Driver 对象都不注册，两个视角都会落空。但 DRIVER_OBJECT 是真实存在于内核内存里的结构，它有一个特征——结构体首部的 Type 字段（IO_TYPE_DRIVER）。所以理论上可以扫描内核内存区域，按特征寻找所有 DRIVER_OBJECT：
-暴力扫描内核内存  ↓ 校验结构特征（Type 魔数、DriverName 有效性、MajorFunction 指针合法性）  ↓ 找到未被任何链表/目录登记的 DRIVER_OBJECT纯内存隐藏驱动
-
-7. 遇到的问题与注意事项
-OBJECT_DIRECTORY 是未导出结构：HashBuckets 的桶数（37 个）和 OBJECT_DIRECTORY_ENTRY 的布局依赖系统版本，需要在自己目标系统上验证结构布局。验证方法：
-
-Windbg: dt nt!_OBJECT_DIRECTORY
-对比不同 Windows 版本的 _OBJECT_DIRECTORY 定义
-特征扫描：Directory 对象包含固定数量的指针数组模式
-
-
-引用计数准则：遍历中每个对象都要 ObReferenceObject &#x2F; ObDereferenceObject 配对——漏释放会引用泄漏（对象永远无法回收），多释放会直接崩溃。匹配对象把引用转交给调用者后，调用者用完必须 ObDereferenceObject。
-
-DriverSection 判空：不是每个 DRIVER_OBJECT 都有有效的 LDR_DATA_TABLE_ENTRY（DriverSection 可能为 NULL），访问前必须判空，否则蓝屏。
-
-误报处理：A 有 B 无 的条目需要基线（boot 驱动、无设备对象驱动都正常），不能直接当隐藏报。
-
-\FileSystem\Filters 子目录：MiniFilter 的驱动对象在子目录里，漏枚举会导致视野不全。
-
-BUCKET_COUNT 硬编码风险：如前所述，37 这个数字未文档化，跨版本使用需验证。
-
-
+后续可以把这套流程脚本化、半自动化：自动扫描 cookie 魔数变体、自动识别 swdd 这类前缀、自动尝试常见 XOR 密钥，并把 PYZ 内模块的提取也补全。再往后，还可以把同样的思路扩展到 PyArmor、Nuitka 等其它 Python 打包&#x2F;加固方案，并尝试与动态行为分析结合，验证静态还原出的逻辑和实际运行行为是否一致。
 参考
-Windows Internals, 7th Edition（对象管理器 &#x2F; 驱动对象 &#x2F; PsLoadedModuleList 章节）
-Microsoft Learn：ZwOpenDirectoryObject &#x2F; ObReferenceObjectByHandle &#x2F; ObGetObjectType &#x2F; IoDriverObjectType
-本系列前篇：SnowSword–进程隐藏检测实现、PspCidTable 进程枚举学习记录
+PyInstaller 官方文档：https://pyinstaller.org/
+pyinstxtractor：https://github.com/extremecoders-re/pyinstxtractor
+uncompyle6：https://github.com/rocky/python-uncompyle6
+Microsoft PE Format：https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
+本系列前篇：恶意样本逆向分析学习记录、日报_PEPEPE_已知明文攻击
 
 ]]></content>
       <categories>
-        <category>Windows Kernel</category>
+        <category>Malware Analysis</category>
       </categories>
       <tags>
-        <tag>SnowSword</tag>
         <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
-        <tag>Anti-Rootkit</tag>
-        <tag>驱动检测</tag>
-        <tag>对象管理器</tag>
+        <tag>Windows</tag>
+        <tag>恶意样本</tag>
+        <tag>PyInstaller</tag>
+        <tag>逆向分析</tag>
+        <tag>反混淆</tag>
+        <tag>Python</tag>
       </tags>
   </entry>
   <entry>
-    <title>PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</title>
-    <url>/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
-    <content><![CDATA[1. 缘起：为什么还需要第二种进程枚举视角在之前为 SnowSword 实现隐藏进程检测时，我用的方案是暴力扫描 PID：以 4 为步长枚举 0 ~ 0x20000，逐个调用 PsLookupProcessByProcessId 反查 EPROCESS。这个方案能用，但有几个明显的局限：
+    <title>从恶意样本分析到HIPS行为检测：一次Windows安全检测思路的实践</title>
+    <url>/2026/08/09/%E6%81%B6%E6%84%8F%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%88%86%E6%9E%90%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95%20-%20%E7%BB%AD/</url>
+    <content><![CDATA[在上一篇文章中，我尝试分析了一个 Windows 恶意样本。分析过程中发现，攻击者并不会依赖某一个“危险 API”完成攻击，而是将多个正常功能组合起来形成完整攻击链，例如进程创建、远程内存分配、代码写入以及线程执行等行为共同构成进程注入。
+这让我重新思考之前 SnowWall 中 HIPS 行为检测的设计：安全检测的重点并不是简单判断某个 API 是否危险，而是分析多个事件之间的关联关系。
+1. 攻击链
+2. 单 API 检测不可靠的原因分析错误设计: 仅拦截 CreateRemoteThread问题: 
 
-扫描范围是”假设”不是”机制”——0x20000 上限写死，高 PID 进程可能漏检；
-大量无效查询——有效 PID 中仍有大量未分配槽位，每次都要完整走一次查询；
-依赖 API 语义——PsLookupProcessByProcessId 本身是导出函数，如果攻击者 Hook 了内核查询路径，返回结果同样不可信。
+误报高：调试器、合法软件更新机制都会调用
+绕过简单：改用 NtQueueApcThread &#x2F; NtSetContextThread 等替代执行方式
+漏报高：攻击者可用 Process Hollowing（无需远程线程）
 
-由此想到一个问题：能不能不经过任何查询 API，直接读取 Windows 内核自己维护的 PID → 进程对象映射？这个数据结构就是 PspCidTable。
-
-核心思路：公开 API 是访问内核数据结构的一个入口，直接遍历 PspCidTable 可以降低对单一查询 API 的依赖；但它不能保证绕过对内核数据结构本身的篡改，也不能消除私有结构随系统版本变化带来的兼容性风险。
-
-2. PspCidTable 是什么PspCidTable 是 ntoskrnl.exe 的私有全局变量，也是进程和线程共用的 CID（Client ID）表。PID 与 TID 都在其中。它不是普通用户态进程句柄表，下面的字段和编码说明也必须以具体 Windows 版本的实测结果为准。
-它的类型是 HANDLE_TABLE（未导出结构），遍历的关键字段是 TableCode：
-
-低 2 位：表级数——0 单级、1 二级、2 三级；
-高位：表基址（读取时用 TableCode &amp; ~3 抹零低 2 位）。
-
-单级&#x2F;二级&#x2F;三级结构的关系：
-单级： TableCode → Entry[]（直接索引）二级： TableCode → 二级表指针[512] → Entry[]三级： TableCode → 三级表指针[512] → 二级表指针[512] → Entry[]
-
-其中 Entry 每项 16 字节（x64）。x64 Win10 上 PspCidTable 通常为三级结构。
-3. 如何定位 PspCidTablePspCidTable 是未导出变量，不能直接引用。最直接的办法是从公开导出函数反向追踪。我这里用的是两步跳板定位法：
-
-在 PsLookupProcessByProcessId 开头 0x100 字节内搜特征码 0xE8（call 指令），解析相对偏移，得到它内部调用的 PspReferenceCidTableEntry；
-在 PspReferenceCidTableEntry 内搜特征码 48 8B 05（mov rax, [rip+disp32]），再解析相对偏移，就得到 PspCidTable 变量的运行时地址。
-
-调试时的核心反汇编输出如下：
-fffff806`ca714a2e 488b0583126b00  mov rax,qword ptr [nt!PspCidTable (fffff806`cadc5cb8)]...fffff803`16425cc4 e8a7010000      call nt!PspReferenceCidTableEntry (fffff803`16425e70)
-
-
-小技巧：48 8B 05 在函数里可能命中多处，先通过 call 跳板锁定 PspReferenceCidTableEntry，再在其内部搜 mov，命中率更高——把调用链当路标。
-
-核心实现：
-PVOID GetPspCidTable() &#123;    PVOID PsLookupProcessByProcessIdAddr = (PVOID)PsLookupProcessByProcessId;    PUCHAR StartSearchAddress = NULL;    // 第一步：在 PsLookupProcessByProcessId 内搜索 call 指令（0xE8）    UCHAR pSpecialCode1[1] = &#123; 0xE8 &#125;;    PVOID result = SearchSpecialCode(PsLookupProcessByProcessIdAddr, 0x100, pSpecialCode1, 1);    if (result != NULL) &#123;        // call 相对偏移：目标地址 = 指令地址 + 5 + disp32        LONG offset = *(PLONG)((PUCHAR)result + 1);        StartSearchAddress = (PUCHAR)((PUCHAR)result + 5 + offset);  // 得到 PspReferenceCidTableEntry    &#125; else &#123;        StartSearchAddress = (PUCHAR)PsLookupProcessByProcessIdAddr;  // 降级：直接从头搜索    &#125;    // 第二步：在 PspReferenceCidTableEntry 内搜索 mov rax, [rip+disp32]（48 8B 05）    UCHAR pSpecialCode2[3] = &#123; 0x48, 0x8B, 0x05 &#125;;    result = SearchSpecialCode(StartSearchAddress, 0x100, pSpecialCode2, 3);    if (NULL == result) return NULL;    LONG offset = *(PLONG)((PUCHAR)result + 3);    return (PVOID)((PUCHAR)result + 7 + offset);  // mov rax,[rip+disp] 指令长 7 字节&#125;
-
-（关键逻辑如上，完整工程代码参照 LyShark实现 补齐。）
-4. 遍历 PspCidTable拿到 PspCidTable 地址后，按 TableCode 的级数逐级遍历。整体流程：
-PspCidTable  ↓ 解析 TableCode（级数 + 基址）遍历有效 Entry  ↓ 解码 Entry 得到对象体地址ObGetObjectType 判断是否为进程对象  ↓handle 值即 PID，收进结果数组  ↓生成第二份进程列表 B
-
-4.1 解析 TableCode注意 PspCidTable 变量里存的是 HANDLE_TABLE*，取 TableCode 要两级解引用：先读变量得表地址，再偏移 +8 读 TableCode 字段。
-ULONG64 ul_tableCode = *(PULONG64)(((ULONG64)*(PULONG64)TableBase) + 8);INT i_low2 = ul_tableCode &amp; 3;   // 表级数if (i_low2 == 0)      parse_table_1(ul_tableCode &amp; ~3, 0, 0, Callback, Context); // 单级else if (i_low2 == 1) parse_table_2(ul_tableCode &amp; ~3, 0, Callback, Context);    // 二级else if (i_low2 == 2) parse_table_3(ul_tableCode &amp; ~3, Callback, Context);       // 三级
-
-4.2 逐级遍历三级表：在当前观察到的 x64 版本中，每层通常是 512 项的指针数组（每项 8 字节），逐级取指针，最底层是 Entry 数组（每项 16 字节）。这里的层级、数量和字段布局不是稳定的公开接口，必须按目标系统版本验证。MmIsAddressValid 只能作为有限的预检，不能替代对象生命周期管理或并发同步。
-4.3 Entry 解码（当前版本假设）在当前参考实现假设下，PspCidTable 使用“锁定句柄”格式，Entry 的低 16 位是引用计数或属性位，对象体地址需要这样解码（右移 16 位并按 16 字节对齐）：
-ULONG64 ul_decode = (LONG64)ul_recode &gt;&gt; 0x10;ul_decode &amp;= 0xfffffffffffffff0;
-
-4.4 Client ID 与 PID 的对应关系在 CID 表语义下，条目的 Client ID 数值可以对应 PID 或 TID；只有通过对象类型判断为进程对象后，才能将其作为 PID 收集。当前参考实现假设每个 Entry 承载 4 个 PID 槽位，handle 编码为：
-handle = i * 4 + 1024 * index1 + 512 * index2 * 1024
-
-PID 必然是 4 的倍数——这也解释了之前暴力扫描为什么能以 4 为步长对齐。进程对象判断用对象管理器 API，配合异常保护：
-static BOOLEAN ProcessEnumCallback(HANDLEINFO* pHandleInfo, PVOID Context) &#123;    if (!pHandleInfo-&gt;Object || !MmIsAddressValid(pHandleInfo-&gt;Object))        return TRUE;  // 无效 Entry 跳过    _try &#123;        if (ObGetObjectType(pHandleInfo-&gt;Object) == *PsProcessType) &#123;            // handle 直接作为 PID 存入数组            EnumContext-&gt;ProcessArray[EnumContext-&gt;ProcessCount++] = pHandleInfo-&gt;Handle;        &#125;    &#125;    _except(EXCEPTION_EXECUTE_HANDLER) &#123;        // 对象可能已被释放，异常时跳过而非蓝屏    &#125;    return TRUE;&#125;
-
-5. 与现有方案的关系和验证意义PID 暴力枚举的表面形式是遍历 PID 数值，但每次查询仍然依赖 PsLookupProcessByProcessId 访问内核维护的 CID 映射。因此，它与直接遍历 PspCidTable 并不是两个独立的数据源。
-两种方案的主要区别在于访问路径：
-
-间接 CID 查询：遍历候选 PID，通过公开 API 查询对应的进程对象；
-直接 CID 表遍历：定位并解析私有的 PspCidTable，再根据对象类型筛选进程对象。
-
-6. 实验设计
-
-
-状态
-间接 CID 查询
-直接 CID 表遍历
-预期结论
+改进设计: 从”单点拦截”转向”行为链评分”
+3. SnowWall 设计思考通过这次分析，结合SnowWall的原始设计方向,即它刚开始只拦截CreateRemoteThread.经过改进后SnowWall使用了”事件组合”来更准确地判定恶意行为,例如将ProcessCreate(CREATE_SUSPENDED)+MemoryAlloc+MemoryWrite这个事件组合判定为进程挂起注入行为
+3.1 SnowWall 当前行为规则模型(简化)SnowWall 采用三层检测架构：┌─────────────────────────────────────────────────────────────┐│  第一层：硬拦截（极高置信度，直接阻断）                        ││  • 跨进程写入 PE 头（MZ&#x2F;Shellcode）                           ││  • Unmap→Alloc→Write→Protect 完整链                         ││  • 挂起进程恢复线程（Hollowing 最后一步）                      │├─────────────────────────────────────────────────────────────┤│  第二层：时序可疑度评分（核心）                                ││  • 按 PID+Cookie 隔离进程档案，防 PID 复用                    ││  • 指数衰减：30s 半衰期，污点进程 60s                          ││  • 8 标签历史环 → 检测组合序列 → 动态加分                      ││  • 污点标记：触发高危行为后永久降阈值（80→64）                 │├─────────────────────────────────────────────────────────────┤│  第三层：调试上下文豁免                                       ││  • 信任分级：微软签名 &gt; Program Files &gt; 普通                   ││  • 红线：PE 头写入 &#x2F; RWX 分配 &#x2F; 主模块 Unmap 绝不豁免          │└─────────────────────────────────────────────────────────────┘标签泛化将具体 API 转化为抽象行为（如 NtAllocateVirtualMemory(Cross, RWX) → CrossExecAlloc），上层规则与具体 API 解耦，对抗替换绕过。组合检测示例：
 
 
 
-正常进程
-✓
-✓
-正常
+攻击类型
+标签序列
+加分
+阈值
 
 
-ActiveProcessLinks 隐藏
-✗
-✓
-检出
+
+远程线程注入
+CrossAlloc → CrossWrite → CrossThreadCreate
++30
+80
 
 
-PspCidTable 隐藏
-✓
-✗
-检出
+Process Hollowing
+Unmap → Alloc → Write → Protect_Exec
++35
+80
 
 
-两边同时隐藏
-✗
-✗
-多源方案仍有盲区
+保护属性拆分
+CrossAlloc → CrossWrite → CrossProtect_Exec
++25
+80
 
 
-从最后一行可以得出结论：检测机制不是”万能探测器”，而是攻击面与数据源之间的博弈——每多一个可信数据源，攻击者就得多篡改一个地方，但盲区始终存在。
-7. 遇到的问题
-两级解引用：一开始只解了一次引用，把 PspCidTable 变量地址当成了表地址，遍历全乱；后来意识到它是 HANDLE_TABLE*。
-遍历次数困惑：参考实现里一级表循环写的是 for (i &lt; 512) // 256?，作者自己也标了疑惑——表大小 4K &#x2F; 每项 16B 应该是 256 项，实际循环却写 512 次，这部分涉及每个 Entry 承载 4 个 handle 的映射，还需要再验证。
-并发修改：遍历过程中 TableCode 和各级表可能被句柄增删或扩容修改。未经确认不应直接依赖内部锁；当前方案只能接受轻微不一致，后续需要评估版本相关的快照、重试或结果去重策略。
-
-8. 展望
-在 Win10、Win11 等目标版本上分别确认 HANDLE_TABLE 布局、TableCode 层级、Entry 数量和对象指针编码；
-为直接遍历逻辑增加版本识别、特征匹配失败处理、遍历边界检查和结果去重，避免把私有结构当作稳定接口；
-通过正常进程创建和退出、PID 较大进程、并发表扩容等场景验证遍历稳定性；
-
-参考
-Windows Internals, 7th Edition（PspCidTable &#x2F; HANDLE_TABLE 相关章节）
-ReactOS 源码（HANDLE_TABLE &#x2F; PspCidTable 的开放实现参考）
-LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（https://www.lyshark.com/post/93beefb4.html）
-本系列前篇：SnowSword–进程隐藏检测实现（PID 暴力扫描方案）
-
+4. 展望当前方案仍然依赖用户态行为采集，而攻击者可以通过 Native API、直接系统调用等方式绕过部分用户态监控。因此下一步计划研究 Windows 内核层事件采集方式，并探索如何结合驱动实现更可靠的行为监控。
 ]]></content>
       <categories>
-        <category>Windows Kernel</category>
+        <category>Malware Analysis</category>
       </categories>
       <tags>
         <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
-        <tag>Anti-Rootkit</tag>
-        <tag>PspCidTable</tag>
-        <tag>进程枚举</tag>
-        <tag>内核逆向</tag>
+        <tag>Windows</tag>
+        <tag>Reserve</tag>
+        <tag>恶意样本</tag>
+        <tag>HIPS</tag>
       </tags>
   </entry>
   <entry>
@@ -1505,8 +1585,8 @@ Microsoft Learn：VirtualAllocEx、WriteProcessMemory、PE 格式
         <category>Reverse Engineering</category>
       </categories>
       <tags>
-        <tag>Windows</tag>
         <tag>网络安全协会暑期培训</tag>
+        <tag>Windows</tag>
         <tag>逆向分析</tag>
         <tag>CTF Reverse</tag>
         <tag>Shellcode</tag>
@@ -1516,207 +1596,127 @@ Microsoft Learn：VirtualAllocEx、WriteProcessMemory、PE 格式
       </tags>
   </entry>
   <entry>
-    <title>PyInstaller 加固样本逆向：从 CArchive 修复到 pyc 反编译</title>
-    <url>/2026/08/23/%E7%AC%AC%E5%8D%81%E4%BA%8C%E7%AF%87%E6%97%A5%E6%8A%A5_PyInstaller%E6%A0%B7%E6%9C%AC%E9%80%86%E5%90%91%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
-    <content><![CDATA[1. 缘起：为什么值得单独写一篇 PyInstaller 样本分析在 Windows 恶意样本里，Python 打包程序已经不算少见。攻击者把 Python 写的 loader、窃密器、键盘记录器用 PyInstaller 打成 exe，既能跨机器运行，又能把真正的逻辑藏进字节码里。对恶意样本分析师来说，把 PyInstaller 里的 Python 字节码完整提取出来往往是分析的第一步。
-这次遇到的样本表面上是一个普通 Windows 程序：运行后提示 Enter input:，输入错误就输出 Wrong input。但用 IDA 打开后，入口逻辑并不是常见的 C&#x2F;C++ 业务代码，而是 PyInstaller bootloader 的特征——它真正的逻辑在附加数据段里。更值得注意的是，这个样本对通用提取工具做了两处明显的对抗：
+    <title>PspCidTable 进程枚举学习记录 —— 从 API 逆向到内核对象表遍历</title>
+    <url>/2026/08/15/%E7%AC%AC%E4%B8%83%E7%AF%87%E6%97%A5%E6%8A%A5_PspCidTable%E8%BF%9B%E7%A8%8B%E6%9E%9A%E4%B8%BE%E5%AD%A6%E4%B9%A0%E8%AE%B0%E5%BD%95/</url>
+    <content><![CDATA[1. 缘起：为什么还需要第二种进程枚举视角在之前为 SnowSword 实现隐藏进程检测时，我用的方案是暴力扫描 PID：以 4 为步长枚举 0 ~ 0x20000，逐个调用 PsLookupProcessByProcessId 反查 EPROCESS。这个方案能用，但有几个明显的局限：
 
-PyInstaller 的 cookie 魔数被改写，导致 pyinstxtractor 直接报 “Missing cookie”；
-CArchive 里的 Python 模块数据被自定义加密，即使绕过 cookie 检查，解压也会失败。
+扫描范围是”假设”不是”机制”——0x20000 上限写死，高 PID 进程可能漏检；
+大量无效查询——有效 PID 中仍有大量未分配槽位，每次都要完整走一次查询；
+依赖 API 语义——PsLookupProcessByProcessId 本身是导出函数，如果攻击者 Hook 了内核查询路径，返回结果同样不可信。
 
-这两处对抗单独看都不难，但组合起来正好可以整理出一条可复用的 PyInstaller 恶意样本静态提取方法链。
-2. 先建立整体认知：PyInstaller 程序长什么样PyInstaller 打包出来的 Windows 程序可以粗略分成两层：
-┌─────────────────────────────────────────────┐│ PE 启动器（bootloader）                      ││   原生 C/C++ 代码，负责解包、加载 Python     │├─────────────────────────────────────────────┤│ overlay：追加在 PE 文件尾部的 CArchive       ││   ├── TOC：条目名称 / 偏移 / 大小 / 类型     ││   ├── 条目类型：                            ││   │   s/m  → Python 字节码（模块/入口脚本）  ││   │   z    → PYZ.pyz（压缩的 Python 模块库） ││   │   b    → DLL / PYD / 数据文件            ││   └── cookie：位于文件尾部，用于定位 CArchive│└─────────────────────────────────────────────┘
+由此想到一个问题：能不能不经过任何查询 API，直接读取 Windows 内核自己维护的 PID → 进程对象映射？这个数据结构就是 PspCidTable。
 
-关键点有两个：
+核心思路：公开 API 是访问内核数据结构的一个入口，直接遍历 PspCidTable 可以降低对单一查询 API 的依赖；但它不能保证绕过对内核数据结构本身的篡改，也不能消除私有结构随系统版本变化带来的兼容性风险。
 
-cookie：一小段固定魔数，通常长这样：MEI\x0c\x0b\x0a\x0b\x0e。bootloader 从文件尾部往回搜索这段魔数，找到后解析后面的 CArchive 偏移和长度。
-CArchive 条目：s 类型是入口脚本（如 main.py），m 类型是被 import 的模块，z 类型是 PYZ。它们大多数情况下是 zlib 压缩后的 Python marshal 数据。
+2. PspCidTable 是什么PspCidTable 是 ntoskrnl.exe 的私有全局变量，也是进程和线程共用的 CID（Client ID）表。PID 与 TID 都在其中。它不是普通用户态进程句柄表，下面的字段和编码说明也必须以具体 Windows 版本的实测结果为准。
+它的类型是 HANDLE_TABLE（未导出结构），遍历的关键字段是 TableCode：
 
-通用提取器（如 pyinstxtractor）就是按这个结构工作的：先找 cookie，再读 TOC，再逐个解压条目。
-3. 对抗点一：cookie 魔数被改写用 pyinstxtractor 处理样本时，最先遇到的就是：
-[!] Error : Missing cookie, unsupported pyinstaller version or not a pyinstaller archive
+低 2 位：表级数——0 单级、1 二级、2 三级；
+高位：表基址（读取时用 TableCode &amp; ~3 抹零低 2 位）。
 
-直接在文件里搜标准魔数 MEI\x0c\x0b\x0a\x0b\x0e，确实搜不到。但文件里存在大量 PyInstaller 特征字符串（pyi-python-flag、PyRun_SimpleStringFlags 等），说明它仍然是 PyInstaller 程序，只是 cookie 被改过。
-继续搜索后发现，文件尾部 cookie 位置的实际字节是：
-73 77 49 0c 0b 0a 0b 0e= swI\x0c\x0b\x0a\x0b\x0e
+单级&#x2F;二级&#x2F;三级结构的关系：
+单级： TableCode → Entry[]（直接索引）二级： TableCode → 二级表指针[512] → Entry[]三级： TableCode → 三级表指针[512] → 二级表指针[512] → Entry[]
 
-也就是说，作者把标准魔数里的 MEI 改成了 swI。
-如果只看工具报错，很容易卡在“工具不支持”上。正确的做法是回到 bootloader 本身：程序能运行，说明它运行时一定能找到某个魔数，去启动器里看它到底在找什么。
-在 IDA 里定位到 bootloader 的归档加载函数后，能看到它并不是直接比较一段明文魔数，而是通过常量加载、移位、加法等操作在运行时构造搜索模式。反汇编里类似这样的片段：
-mov rcx, cs:qword_140030E40mov [rsp+Buffer], rcxmov r8d, 8                ; 搜索长度 8 字节shr rcx, 18hadd cl, 0Dh               ; 修正第 4 个字节mov [rsp+Buffer+3], clcall sub_1400084F0        ; 从文件尾部反向搜索魔数
+其中 Entry 每项 16 字节（x64）。x64 Win10 上 PspCidTable 通常为三级结构。
+3. 如何定位 PspCidTablePspCidTable 是未导出变量，不能直接引用。最直接的办法是从公开导出函数反向追踪。我这里用的是两步跳板定位法：
 
-顺着这个逻辑确认，bootloader 实际接受的 cookie 就是 swI\x0c\x0b\x0a\x0b\x0e。启动器里甚至还保留了另一个变体（swI\x0d...），用于外部 .pkg 归档的加载路径。
-修复方法：把文件尾部 cookie 的 swI 改回 MEI，字节数不变，不会影响任何偏移。修改后 pyinstxtractor 就能正常识别：
-data = bytearray(open(&#x27;sample.exe&#x27;, &#x27;rb&#x27;).read())idx = data.rfind(b&#x27;swI\x0c\x0b\x0a\x0b\x0e&#x27;)data[idx:idx+3] = b&#x27;MEI&#x27;open(&#x27;sample_patched.exe&#x27;, &#x27;wb&#x27;).write(data)
+在 PsLookupProcessByProcessId 开头 0x100 字节内搜特征码 0xE8（call 指令），解析相对偏移，得到它内部调用的 PspReferenceCidTableEntry；
+在 PspReferenceCidTableEntry 内搜特征码 48 8B 05（mov rax, [rip+disp32]），再解析相对偏移，就得到 PspCidTable 变量的运行时地址。
+
+调试时的核心反汇编输出如下：
+fffff806`ca714a2e 488b0583126b00  mov rax,qword ptr [nt!PspCidTable (fffff806`cadc5cb8)]...fffff803`16425cc4 e8a7010000      call nt!PspReferenceCidTableEntry (fffff803`16425e70)
 
 
-方法要点：通用提取器是基于“标准结构”写的，遇到魔数被改时，不要急着放弃或猜，先去 bootloader 里确认它运行时使用的真实魔数。
+小技巧：48 8B 05 在函数里可能命中多处，先通过 call 跳板锁定 PspReferenceCidTableEntry，再在其内部搜 mov，命中率更高——把调用链当路标。
 
-4. 对抗点二：Python 模块数据被自定义加密cookie 修好后再提取，pyinstxtractor 能解析出 58 个 CArchive 条目，但关键模块全部解压失败：
-[!] Error : Failed to decompress pyimod01_archive[!] Error : Failed to decompress pyimod02_importers[!] Error : Failed to decompress CreackMe&amp;&amp;FxxMe
+核心实现：
+PVOID GetPspCidTable() &#123;    PVOID PsLookupProcessByProcessIdAddr = (PVOID)PsLookupProcessByProcessId;    PUCHAR StartSearchAddress = NULL;    // 第一步：在 PsLookupProcessByProcessId 内搜索 call 指令（0xE8）    UCHAR pSpecialCode1[1] = &#123; 0xE8 &#125;;    PVOID result = SearchSpecialCode(PsLookupProcessByProcessIdAddr, 0x100, pSpecialCode1, 1);    if (result != NULL) &#123;        // call 相对偏移：目标地址 = 指令地址 + 5 + disp32        LONG offset = *(PLONG)((PUCHAR)result + 1);        StartSearchAddress = (PUCHAR)((PUCHAR)result + 5 + offset);  // 得到 PspReferenceCidTableEntry    &#125; else &#123;        StartSearchAddress = (PUCHAR)PsLookupProcessByProcessIdAddr;  // 降级：直接从头搜索    &#125;    // 第二步：在 PspReferenceCidTableEntry 内搜索 mov rax, [rip+disp32]（48 8B 05）    UCHAR pSpecialCode2[3] = &#123; 0x48, 0x8B, 0x05 &#125;;    result = SearchSpecialCode(StartSearchAddress, 0x100, pSpecialCode2, 3);    if (NULL == result) return NULL;    LONG offset = *(PLONG)((PUCHAR)result + 3);    return (PVOID)((PUCHAR)result + 7 + offset);  // mov rax,[rip+disp] 指令长 7 字节&#125;
 
-把 pyimod01_archive 的原始数据前几个字节打出来看：
-73 77 64 64 d2 70 f7 25 ...= swdd....（不是 zlib 头）
+（关键逻辑如上，完整工程代码参照 LyShark实现 补齐。）
+4. 遍历 PspCidTable拿到 PspCidTable 地址后，按 TableCode 的级数逐级遍历。整体流程：
+PspCidTable  ↓ 解析 TableCode（级数 + 基址）遍历有效 Entry  ↓ 解码 Entry 得到对象体地址ObGetObjectType 判断是否为进程对象  ↓handle 值即 PID，收进结果数组  ↓生成第二份进程列表 B
 
-正常的 zlib 流应该以 78 9c 或 78 da 开头，而这里以 swdd 开头。很明显，作者在压缩前对数据做了处理，并且给每个加密条目都加了 swdd 前缀。
-解密逻辑仍然藏在 bootloader 里。定位到负责解压条目的函数 sub_1400011F0，反编译后能看到一段非常直白的处理：
+4.1 解析 TableCode注意 PspCidTable 变量里存的是 HANDLE_TABLE*，取 TableCode 要两级解引用：先读变量得表地址，再偏移 +8 读 TableCode 字段。
+ULONG64 ul_tableCode = *(PULONG64)(((ULONG64)*(PULONG64)TableBase) + 8);INT i_low2 = ul_tableCode &amp; 3;   // 表级数if (i_low2 == 0)      parse_table_1(ul_tableCode &amp; ~3, 0, 0, Callback, Context); // 单级else if (i_low2 == 1) parse_table_2(ul_tableCode &amp; ~3, 0, Callback, Context);    // 二级else if (i_low2 == 2) parse_table_3(ul_tableCode &amp; ~3, Callback, Context);       // 三级
 
-如果读到的数据以 swdd 开头，先去掉前 4 字节；
-对剩余数据逐字节 XOR 0xAA；
-把处理后的数据交给 inflate 解压。
+4.2 逐级遍历三级表：在当前观察到的 x64 版本中，每层通常是 512 项的指针数组（每项 8 字节），逐级取指针，最底层是 Entry 数组（每项 16 字节）。这里的层级、数量和字段布局不是稳定的公开接口，必须按目标系统版本验证。MmIsAddressValid 只能作为有限的预检，不能替代对象生命周期管理或并发同步。
+4.3 Entry 解码（当前版本假设）在当前参考实现假设下，PspCidTable 使用“锁定句柄”格式，Entry 的低 16 位是引用计数或属性位，对象体地址需要这样解码（右移 16 位并按 16 字节对齐）：
+ULONG64 ul_decode = (LONG64)ul_recode &gt;&gt; 0x10;ul_decode &amp;= 0xfffffffffffffff0;
 
-对应的 Python 验证脚本：
-import zlibraw = open(&#x27;pyimod01_archive.bin&#x27;, &#x27;rb&#x27;).read()assert raw[:4] == b&#x27;swdd&#x27;data = bytes(b ^ 0xAA for b in raw[4:])   # 去掉 swdd 前缀后整体 XOR 0xAAplain = zlib.decompress(data)             # 得到 marshal 代码对象print(len(plain), plain[:16].hex())
+4.4 Client ID 与 PID 的对应关系在 CID 表语义下，条目的 Client ID 数值可以对应 PID 或 TID；只有通过对象类型判断为进程对象后，才能将其作为 PID 收集。当前参考实现假设每个 Entry 承载 4 个 PID 槽位，handle 编码为：
+handle = i * 4 + 1024 * index1 + 512 * index2 * 1024
 
-第一次验证就成功解出 2999 字节，说明加密算法就是“前缀 + 固定单字节 XOR”，没有额外密钥或复杂状态。对于恶意样本分析来说这是好消息：固定 XOR 的混淆只能挡住不会看数据的工具，挡不住愿意往下跟一层的人。
-5. 字节码恢复与反编译解压出来的数据是 Python 3.8 的 marshal 代码对象（以 e3 00 00 00 开头），不是完整的 .pyc 文件。要反编译，需要补上 Python 3.8 的 pyc 头：
-55 0d 0d 0a 00 00 00 00 00 00 00 00 00 00 00 00
+PID 必然是 4 的倍数——这也解释了之前暴力扫描为什么能以 4 为步长对齐。进程对象判断用对象管理器 API，配合异常保护：
+static BOOLEAN ProcessEnumCallback(HANDLEINFO* pHandleInfo, PVOID Context) &#123;    if (!pHandleInfo-&gt;Object || !MmIsAddressValid(pHandleInfo-&gt;Object))        return TRUE;  // 无效 Entry 跳过    _try &#123;        if (ObGetObjectType(pHandleInfo-&gt;Object) == *PsProcessType) &#123;            // handle 直接作为 PID 存入数组            EnumContext-&gt;ProcessArray[EnumContext-&gt;ProcessCount++] = pHandleInfo-&gt;Handle;        &#125;    &#125;    _except(EXCEPTION_EXECUTE_HANDLER) &#123;        // 对象可能已被释放，异常时跳过而非蓝屏    &#125;    return TRUE;&#125;
 
-补完头之后，用 uncompyle6 就能直接恢复主脚本源码。恢复出来的核心逻辑是一个自定义实现的 RC4 类加解密函数：
-def arc_cipher(data: bytes, key: bytes) -&gt; bytes:    # 自实现 RC4 加密/解密    ...    return bytes(out)key = b&#x27;NSSCTF&#x27;user_input = input(&quot;Enter input: &quot;).encode()encrypted = arc_cipher(user_input, key)if encrypted == target_bytes:    print(f&quot;Your are right, flag is NSSCTF&#123;&#123;&#123;user_input.decode()&#125;&#125;&#125;&quot;)else:    print(&quot;Wrong input&quot;)
+5. 与现有方案的关系和验证意义PID 暴力枚举的表面形式是遍历 PID 数值，但每次查询仍然依赖 PsLookupProcessByProcessId 访问内核维护的 CID 映射。因此，它与直接遍历 PspCidTable 并不是两个独立的数据源。
+两种方案的主要区别在于访问路径：
 
-到这里，样本的完整行为已经清楚了：它读入一段输入，用固定 key 做自实现 RC4，和内置密文比较。由于 RC4 是对称算法，用同一函数处理密文就能还原出正确输入。
-验证时只需要跑一遍本地还原逻辑，确认“恢复出的输入能通过程序校验”即可。本文不展开具体输入值，因为重点不是这道题本身，而是这条提取链。
-6. 对恶意样本分析的启发6.1 通用提取器失效时，方法链比工具重要这次分析真正有价值的地方，不是“把 swI 改成 MEI”，而是面对失效时的思考顺序：
-识别打包器  → 理解标准结构（cookie / CArchive / PYZ / pyc）  → 工具报错时，回到 bootloader 确认真实约定  → 定位自定义处理逻辑（魔数构造、解密、解压）  → 手工恢复数据  → 补结构头，交给反编译器
+间接 CID 查询：遍历候选 PID，通过公开 API 查询对应的进程对象；
+直接 CID 表遍历：定位并解析私有的 PspCidTable，再根据对象类型筛选进程对象。
 
-工具负责加速，但结构知识负责兜底。PyInstaller 的 cookie、TOC、条目类型、pyc 头这些都是公开且固定的，只要 bootloader 还在按这套结构运行，就能手工还原。
-6.2 静态分析的边界这个样本展示了静态分析的一个典型困境：字符串、魔数、数据头都可以被改写，甚至模块数据可以被整体加密。如果只依赖“搜字符串”和“跑通用提取器”，很容易得出错误结论。
-但静态分析仍然有价值：bootloader 是原生代码，它必须实现解密逻辑，才能让 Python 运行时加载模块。只要找到 bootloader 里 inflate 之前的处理代码，就能还原整个数据变换。混淆可以藏数据，但藏不住处理数据的代码。
-6.3 与 ARK &#x2F; SnowSword 检测思维的关联这个样本的对抗方式，和 Rootkit 隐藏自己的思路很像：
+6. 实验设计
 
-恶意样本改掉 PyInstaller cookie 魔数 → 通用提取器失效；
-Rootkit 摘掉 ActiveProcessLinks &#x2F; 模块链表 → 通用枚举工具失效。
 
-两者的共同点是：攻击者只需要让“单一数据源&#x2F;单一工具”失效，就能显著提高分析门槛。 这也解释了为什么 SnowSword 做检测时要坚持多视角交叉验证——模块列表、对象目录、内存特征、运行时行为互相印证，而不是把某一个列表当成绝对事实。逆向分析同理：不能因为一个提取器报错就判定“不是 PyInstaller”，也不能因为一个字符串匹配就认定样本行为。
-7. 遇到的问题与局限
-Python 版本不匹配：当前环境是 Python 3.11，样本是 Python 3.8，pyinstxtractor 对 PYZ 的自动提取会因 marshal 版本不匹配而跳过。主脚本在 CArchive 里不受影响，但 PYZ 内模块需要额外处理。
-方法依赖具体 bootloader 修改：本次的 swdd + XOR 0xAA 是针对这个样本的定制逻辑；换一个样本，前缀、密钥、算法位置都可能变化，不能直接套脚本。
-手工解析容易踩偏移坑：CArchive 的 TOC 条目是定长头 + 变长名字，解析时如果字段偏移算错，后面的条目会全部错位。写脚本时要先用已知 DLL 条目（能正常 zlib 解压）做自检。
-反编译质量依赖工具：uncompyle6 对 Python 3.8 支持尚可，但遇到复杂控制流仍可能失败；必要时需要结合字节码 dis 手工分析。
+状态
+间接 CID 查询
+直接 CID 表遍历
+预期结论
 
-8. 总结与展望这次分析形成了一条可以复用的 PyInstaller 恶意样本静态提取流水线：
-PE 启动器识别  → cookie 修复  → CArchive 手工解析  → 定位 bootloader 自定义解密  → 恢复 Python 字节码  → 补 pyc 头 + 反编译
 
-后续可以把这套流程脚本化、半自动化：自动扫描 cookie 魔数变体、自动识别 swdd 这类前缀、自动尝试常见 XOR 密钥，并把 PYZ 内模块的提取也补全。再往后，还可以把同样的思路扩展到 PyArmor、Nuitka 等其它 Python 打包&#x2F;加固方案，并尝试与动态行为分析结合，验证静态还原出的逻辑和实际运行行为是否一致。
+
+正常进程
+✓
+✓
+正常
+
+
+ActiveProcessLinks 隐藏
+✗
+✓
+检出
+
+
+PspCidTable 隐藏
+✓
+✗
+检出
+
+
+两边同时隐藏
+✗
+✗
+多源方案仍有盲区
+
+
+从最后一行可以得出结论：检测机制不是”万能探测器”，而是攻击面与数据源之间的博弈——每多一个可信数据源，攻击者就得多篡改一个地方，但盲区始终存在。
+7. 遇到的问题
+两级解引用：一开始只解了一次引用，把 PspCidTable 变量地址当成了表地址，遍历全乱；后来意识到它是 HANDLE_TABLE*。
+遍历次数困惑：参考实现里一级表循环写的是 for (i &lt; 512) // 256?，作者自己也标了疑惑——表大小 4K &#x2F; 每项 16B 应该是 256 项，实际循环却写 512 次，这部分涉及每个 Entry 承载 4 个 handle 的映射，还需要再验证。
+并发修改：遍历过程中 TableCode 和各级表可能被句柄增删或扩容修改。未经确认不应直接依赖内部锁；当前方案只能接受轻微不一致，后续需要评估版本相关的快照、重试或结果去重策略。
+
+8. 展望
+在 Win10、Win11 等目标版本上分别确认 HANDLE_TABLE 布局、TableCode 层级、Entry 数量和对象指针编码；
+为直接遍历逻辑增加版本识别、特征匹配失败处理、遍历边界检查和结果去重，避免把私有结构当作稳定接口；
+通过正常进程创建和退出、PID 较大进程、并发表扩容等场景验证遍历稳定性；
+
 参考
-PyInstaller 官方文档：https://pyinstaller.org/
-pyinstxtractor：https://github.com/extremecoders-re/pyinstxtractor
-uncompyle6：https://github.com/rocky/python-uncompyle6
-Microsoft PE Format：https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
-本系列前篇：恶意样本逆向分析学习记录、日报_PEPEPE_已知明文攻击
+Windows Internals, 7th Edition（PspCidTable &#x2F; HANDLE_TABLE 相关章节）
+ReactOS 源码（HANDLE_TABLE &#x2F; PspCidTable 的开放实现参考）
+LyShark 公开示例：PspCidTable 定位与三级表遍历参考实现（https://www.lyshark.com/post/93beefb4.html）
+本系列前篇：SnowSword–进程隐藏检测实现（PID 暴力扫描方案）
 
 ]]></content>
       <categories>
-        <category>Malware Analysis</category>
+        <category>Windows Kernel</category>
       </categories>
       <tags>
-        <tag>Windows</tag>
-        <tag>恶意样本</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>逆向分析</tag>
-        <tag>PyInstaller</tag>
-        <tag>反混淆</tag>
-        <tag>Python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>SnowSword 进程隐藏检测实现：从用户态枚举到内核对象分析</title>
-    <url>/2026/08/04/SnowSword-%E8%BF%9B%E7%A8%8B%E9%9A%90%E8%97%8F%E6%A3%80%E6%B5%8B-%E4%BF%AE%E6%AD%A3%E7%89%88/</url>
-    <content><![CDATA[项目地址：https://github.com/user-lzy/SnowSword1. 为什么需要检测隐藏进程在开发 SnowSword 之前，我曾使用过一些 ARK 类工具分析 Windows 系统。但在实际测试过程中发现，不同工具对于进程枚举结果可能存在差异。因此，我希望实现一种多视角交叉验证的方法，而不是依赖单一 API。
-众所周知，部分恶意程序会通过 Hook R3 API（Process32Next、NtQuerySystemInformation）、Hook R0 API（ZwQuerySystemInformation）或篡改 R0 内核结构（EPROCESS 摘链、Hook ZwQuerySystemInformation）来隐藏进程，避免被用户通过系统自带的任务管理器等普通安全工具发现其活动。但正所谓”天网恢恢，疏而不漏”，我们可以使用一种交叉对比进程枚举结果的方法找出恶意程序的隐藏进程。
-1.1 为什么需要多视角枚举？Windows中不存在一个绝对可信的进程观察视角。
-用户态工具、对象管理器、内核进程管理机制分别维护着不同的信息来源。如果攻击者只修改其中一种视角，例如Hook某个用户态接口，其他来源仍可能暴露异常。
-因此，SnowSword的设计思路不是寻找一个万能的进程枚举接口，而是从多个角度获取进程信息，并通过结果差异发现异常。
-2. 不同视角下的进程枚举机制2.1 用户态 API 枚举
-Process32First + Process32Next：Windows 用户态最常见的进程枚举接口。但是它依赖用户态 API 调用链，如果攻击者 IAT Hook &#x2F; Inline Hook 它或者更底层的数据来源，返回结果可能已经不可信。因此 SnowSword 中并不将其作为最终判断依据，而是作为一个”普通用户看到的世界”。
-
-NtQuerySystemInformation(SystemProcessInformation, …)：Native API（由于不存在于导入库中，需要自行通过 GetModuleHandle + GetProcAddress 动态调用），可以获取更多进程信息，但由于它已十分出名，所以通常也会被列入 hook 名单。
-
-
-2.2 内核态 API 枚举
-ZwQuerySystemInformation(SystemProcessInformation, …)：内核最常见的进程枚举手段，获取的进程信息同 R3 的 NtQuerySystemInformation(SystemProcessInformation, ...)，但相较 R3 更可信。
-
-3. SnowSword 实现方案3.1 用户态获取进程列表
-调用 Process32First + Process32Next 获取进程列表 a，作为进程列表基线用于交叉检测隐藏进程。
-
-除了传统进程枚举 API 外，SnowSword 还尝试从系统句柄角度观察进程。Windows 中的进程对象通常会对应一个 Process 类型句柄，因此可以通过 SystemHandleInformation 获取全局句柄表，再筛选其中的 Process 和 Thread 类型。通过句柄反向获得 PID，形成进程列表 b。最后去重。
-
-
-3.2 驱动获取进程列表Windows 内核分配 PID 时采用 4 字节对齐的增量分配策略——PID 的高 30 位用于索引进程对象数组，低 2 位固定为 0。因此合法 PID 必然是 4 的倍数，以 4 为步长暴力枚举可以跳过 75% 的无效值。
-具体实现：以 4 为步长暴力枚举 0 ~ 0x20000（131072）的 PID，尝试调用 PsLookupProcessByProcessId 获取进程对象指针，成功且 PsGetProcessExitStatus 返回值等于 STATUS_PENDING（为了排除部分僵尸进程）则将 PID 插入进程列表 c。
-该方法本质上利用了系统 PID 管理机制进行间接验证，与直接遍历 PspCidTable 相比实现简单，但效率和兼容性存在限制。
-最初考虑过直接遍历 EPROCESS 链表，但是该方案存在两个问题：
-
-不同 Windows 版本结构变化较大。
-如果攻击者采用 DKOM 隐藏，同样可能影响该链表。
-
-因此 SnowSword 选择通过 PID 反查方式，利用系统自身 PID 管理机制获取进程对象。虽然扫描范围有限，但不依赖固定结构偏移。
-3.3 用户态与内核态结果比较比较进程列表 a、b、c，在 UI 中标记出现在列表 b&#x2F;c 但未出现在列表 a 的隐藏进程。
-3.4 隐藏进程检测实验
-
-截图说明：
-
-SnowSword 进程列表（上方）：可以看到 TestAPI.exe（PID 9812，黄色高亮），以及多个 (Exited) 进程（已退出但内核对象尚未销毁的僵尸进程）。
-任务管理器（下方）：无法看到 TestAPI.exe，因为已被 InlineHook 摘除。
-TestAPI 窗口（右下）：提供”Hook”按钮，用于触发 DLL 注入。
-
-
-我编写了一个测试程序 TestAPI.exe（PID 9812），并开发了一个 InlineHook.dll。通过 TestAPI，将 InlineHook.dll 分别注入到**任务管理器（Taskmgr.exe）**和 SnowSword 两个进程中。
-InlineHook.dll 的核心逻辑是 Hook ntdll.dll 中的 NtQuerySystemInformation 函数，当查询 SystemProcessInformation（进程列表）时，将 TestAPI.exe 从返回的链表数据中”摘除”。核心逻辑如下：
-// 注意：本代码假设被隐藏进程不会出现在链表的第一个节点// （SystemProcessInformation 的头节点通常是 System Idle Process）// 生产环境需要处理头节点被隐藏的情况NTSTATUS NTAPI Fake_NtQuerySystemInformation(    SYSTEM_INFORMATION_CLASS SystemInformationClass,    PVOID SystemInformation,    ULONG SystemInformationLength,    PULONG ReturnLength)&#123;    NTSTATUS Status = Old_NtQuerySystemInformation(        SystemInformationClass,        SystemInformation,        SystemInformationLength,        ReturnLength    );    if (!NT_SUCCESS(Status) || SystemInformationClass != SystemProcessInformation)        return Status;    // 双指针法：pNextOffset 指向前一个节点的 NextEntryOffset 字段（或头指针）    PULONG pNextOffset = (PULONG)&amp;((PSYSTEM_PROCESS_INFORMATION)SystemInformation)-&gt;NextEntryOffset;    PSYSTEM_PROCESS_INFORMATION Current = (PSYSTEM_PROCESS_INFORMATION)SystemInformation;    while (Current)    &#123;        BOOL Hide = (Current-&gt;ImageName.Buffer &amp;&amp;            _wcsicmp(Current-&gt;ImageName.Buffer, L&quot;TestAPI.exe&quot;) == 0);        if (Hide)        &#123;            if (Current-&gt;NextEntryOffset == 0)            &#123;                // 尾节点：将前一个节点的偏移设为 0                *pNextOffset = 0;                break;            &#125;            else            &#123;                // 中间节点：跳过当前节点                *pNextOffset += Current-&gt;NextEntryOffset;                Current = (PSYSTEM_PROCESS_INFORMATION)((PUCHAR)Current + Current-&gt;NextEntryOffset);                continue;            &#125;        &#125;        // 推进        if (Current-&gt;NextEntryOffset == 0)            break;        pNextOffset = &amp;Current-&gt;NextEntryOffset;        Current = (PSYSTEM_PROCESS_INFORMATION)((PUCHAR)Current + Current-&gt;NextEntryOffset);    &#125;    return Status;&#125;
-
-实验结果：
-
-
-
-工具
-是否看到 TestAPI.exe
-原因
-
-
-
-被注入的任务管理器
-❌ 看不到
-NtQuerySystemInformation 被 Hook，链表被篡改
-
-
-被注入的 SnowSword
-✅ 能看到
-使用句柄枚举 + 内核驱动反查，不依赖被 Hook 的 R3 API
-
-
-这就验证了单一 R3 API Hook 无法对抗多视角交叉检测的观点。
-在驱动层枚举时，我们通过 PsGetProcessExitStatus 过滤掉 STATUS_PENDING 以外的进程，避免将已退出进程误判为隐藏进程。而用户态的 Process32Next 通常不会返回这些已退出进程，这也解释了为什么 SnowSword 的进程列表比任务管理器”更长”——它包含了更多内核视角的信息。
-4. 开发过程中遇到的问题4.1 比较结果一开始我想当然以为直接取列表 a 和列表 b&#x2F;c 的差集即可，但 UI 上会出现重复显示的隐藏进程，排查后才发现是因为一个进程可能：被多个进程打开句柄，或是拥有多个线程句柄。所以 Handle-PID 不是简单的一对一关系，需要使用 HashSet 保存 PID。
-4.2 僵尸进程判断问题测试过程中发现，部分已经退出的进程对象仍然可能短时间存在。因此不能简单认为 PsLookupProcessByProcessId 成功即可，需要结合 PsGetProcessExitStatus 进一步判断。
-5. 后续优化方向目前 SnowSword 的隐藏进程检测仍存在限制：
-
-PID 扫描范围固定
-依赖 PsLookupProcessByProcessId
-无法发现所有内核级隐藏方式
-
-后续计划：
-
-解析 PspCidTable 的三级表结构获取进程列表
-增加线程交叉验证
-
-参考
-Microsoft Learn - Process32Next function
-看雪论坛 - Windows 进程枚举 NtQuerySystemInformation(SystemProcessInformation)
-Windows Internals, 7th Edition
-
-]]></content>
-      <categories>
-        <category>SnowSword Development</category>
-      </categories>
-      <tags>
-        <tag>SnowSword</tag>
-        <tag>网络安全协会暑期培训</tag>
-        <tag>Windows Kernel</tag>
         <tag>Anti-Rootkit</tag>
-        <tag>Process</tag>
+        <tag>Windows Kernel</tag>
+        <tag>网络安全协会暑期培训</tag>
+        <tag>PspCidTable</tag>
+        <tag>进程枚举</tag>
+        <tag>内核逆向</tag>
       </tags>
   </entry>
 </search>
